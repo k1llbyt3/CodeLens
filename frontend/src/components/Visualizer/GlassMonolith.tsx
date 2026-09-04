@@ -347,7 +347,7 @@ export const ArrayBase: React.FC<ArrayBaseProps> = ({
 
 // Aliases for compatibility
 export const GlassMonolith = ArrayBase as any;
-export const ArrayBlock = ArrayBase as any;
+export { ArrayBlock } from "./ArrayBlock";
 
 
 

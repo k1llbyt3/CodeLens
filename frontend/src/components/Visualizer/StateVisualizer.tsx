@@ -280,18 +280,22 @@ export const StateVisualizer: React.FC<StateVisualizerProps> = ({
             </div>
           ) : (
             <div className="space-y-4">
-              {arrayStateList.map((state) => (
-                <ArrayVisualizer
-                  key={state.name}
-                  name={state.name}
-                  blocks={state.blocks}
-                  pointers={state.pointers}
-                  maxVal={globalMaxVal}
-                  swapIndices={state.swapIndices}
-                  currentStep={currentStep}
-                  isCountingLength={isCountingLength}
-                />
-              ))}
+              {arrayStateList.length > 0 ? (
+                arrayStateList.map((state) => (
+                  <ArrayVisualizer
+                    key={state.name}
+                    name={state.name}
+                    blocks={state.blocks}
+                    pointers={state.pointers}
+                    maxVal={globalMaxVal}
+                    swapIndices={state.swapIndices}
+                    currentStep={currentStep}
+                    isCountingLength={isCountingLength}
+                  />
+                ))
+              ) : (
+                <ArrayVisualizer />
+              )}
 
               {primitiveEntries.length > 0 && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

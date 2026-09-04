@@ -1,21 +1,162 @@
-import React from "react";
+"use client";
+import React, { useState, useMemo } from "react";
 import { ArrayBase } from "./GlassMonolith";
+import { ArrayBlock, ThreeArrayBlocks } from "./ArrayBlock";
 
 export interface ArrayVisualizerProps {
   name?: string;
   blocks?: any[];
   pointers?: any[];
+  maxVal?: number;
+  swapIndices?: [number, number] | null;
   [key: string]: any;
 }
 
 export const ArrayVisualizer: React.FC<ArrayVisualizerProps> = ({
+  name,
   blocks = [],
+  pointers = [],
+  maxVal,
+  swapIndices = null,
 }) => {
-  const count = blocks && blocks.length > 0 ? blocks.length : 4;
+  const [activeOverrideIdx, setActiveOverrideIdx] = useState<number | null>(null);
+
+  // Normalize array elements from trace blocks ({ val, status, ... } or raw numbers)
+  const { currentArray, activeIndices, computedMax } = useMemo(() => {
+    let rawVals: { val: number; state: string }[] = [];
+
+    if (blocks && blocks.length > 0) {
+      rawVals = blocks.map((b, i) => {
+        const val =
+          typeof b === "number"
+            ? b
+            : typeof b?.val === "number"
+            ? b.val
+            : typeof b?.value === "number"
+            ? b.value
+            : 0;
+        const isSwapping = swapIndices && (swapIndices[0] === i || swapIndices[1] === i);
+        const isActive =
+          b?.status === "writing" ||
+          b?.status === "reading" ||
+          b?.state === "active" ||
+          isSwapping ||
+          activeOverrideIdx === i;
+        const state = b?.state || (isActive ? "active" : b?.status === "reading" ? "amber" : "default");
+        return {
+          val,
+          state,
+        };
+      });
+    } else {
+      // Default fallback if no blocks provided: [15, 4, 7, 8]
+      const fallback = [15, 4, 7, 8];
+      rawVals = fallback.map((num, i) => ({
+        val: num,
+        state: i === 1 ? "amber" : i === 2 ? "green" : "default",
+      }));
+    }
+
+    const calculatedMax =
+      maxVal && maxVal > 0
+        ? maxVal
+        : Math.max(...rawVals.map((item) => item.val), 1);
+
+    const activeSet = new Set<number>();
+    rawVals.forEach((item, idx) => {
+      if (item.state === "active" || item.state === "green" || item.state === "amber") {
+        activeSet.add(idx);
+      }
+    });
+
+    return {
+      currentArray: rawVals,
+      activeIndices: activeSet,
+      computedMax: calculatedMax,
+    };
+  }, [blocks, activeOverrideIdx, maxVal, swapIndices]);
+
+  const count = currentArray.length;
+
+  // Shared geometry constants strictly locked to Three.js base & block layout
+  const itemWidth = 84;
+  const gap = 26;
+  const paddingX = 36;
+  const contentWidth = count * itemWidth + (count - 1) * gap;
+  const totalWidth = 2 * paddingX + contentWidth;
+  const sceneHeight = 275;
+
+  // Normalize pointers list for any number of dynamic pointers
+  const normalizedPointers = useMemo(() => {
+    if (!pointers || pointers.length === 0) return [];
+    return pointers.map((p, idx) => {
+      const index =
+        typeof p === "number"
+          ? p
+          : typeof p?.index === "number"
+          ? p.index
+          : typeof p?.idx === "number"
+          ? p.idx
+          : 0;
+      const label =
+        typeof p === "object"
+          ? p?.name || p?.label || p?.var || `p${idx}`
+          : `p${idx}`;
+      return { index, label };
+    });
+  }, [pointers]);
+
+  const firstPointer = pointers && pointers.length > 0 ? pointers[0] : null;
+  const pointerIndex: number | null =
+    firstPointer != null
+      ? typeof firstPointer === "number"
+        ? firstPointer
+        : typeof firstPointer?.index === "number"
+        ? firstPointer.index
+        : null
+      : null;
+  const pointerLabel: string = firstPointer?.name || firstPointer?.label || "j";
 
   return (
-    <div className="flex flex-col items-center justify-center p-8 bg-[#040507] w-full min-h-[160px]">
-      <ArrayBase count={count} />
+    <div className="flex flex-col items-center justify-center w-full select-none">
+      {/* Visualizer Header */}
+      <div className="w-full max-w-4xl mb-6 flex flex-wrap items-center justify-between gap-3 px-2">
+        <div className="flex items-center gap-2">
+          {name && (
+            <span className="text-xs font-mono font-semibold px-2 py-1 rounded bg-white/[0.06] text-neutral-300 border border-white/[0.08]">
+              {name}
+            </span>
+          )}
+          <span className="text-xs font-mono text-neutral-400">
+            Array Visualizer &bull; <span className="text-neutral-200">{count} elements</span> &bull; Max Val:{" "}
+            <span className="text-cyan-400 font-semibold">{computedMax}</span>
+          </span>
+        </div>
+      </div>
+
+      {/* Main Responsive Horizontal Scroll Wrapper */}
+      <div className="w-full overflow-x-auto pb-4 flex justify-center scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+        <div
+          className="relative flex flex-col items-center"
+          style={{ width: `${totalWidth}px` }}
+        >
+          {/* ═══ THREE.JS 3D ARRAY SYSTEM (BLOCKS + BASE) ═══ */}
+          <ThreeArrayBlocks
+            currentArray={currentArray}
+            activeIndices={activeIndices}
+            computedMax={computedMax}
+            totalWidth={totalWidth}
+            itemWidth={itemWidth}
+            gap={gap}
+            paddingX={paddingX}
+            sceneHeight={sceneHeight}
+            pointerIndex={pointerIndex}
+            pointerLabel={pointerLabel}
+            pointers={normalizedPointers}
+            onBlockClick={(idx) => setActiveOverrideIdx(activeOverrideIdx === idx ? null : idx)}
+          />
+        </div>
+      </div>
     </div>
   );
 };
