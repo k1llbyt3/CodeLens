@@ -1,0 +1,1135 @@
+{
+  "directed": false,
+  "multigraph": false,
+  "graph": {},
+  "nodes": [
+    {
+      "label": "main.py",
+      "file_type": "code",
+      "source_file": "backend\\app\\main.py",
+      "source_location": "L1",
+      "id": "backend_app_main_py",
+      "community": 9,
+      "norm_label": "main.py"
+    },
+    {
+      "label": "health_check()",
+      "file_type": "code",
+      "source_file": "backend\\app\\main.py",
+      "source_location": "L28",
+      "id": "app_main_health_check",
+      "community": 9,
+      "norm_label": "health_check()"
+    },
+    {
+      "label": "__init.py__.py",
+      "file_type": "code",
+      "source_file": "backend\\app\\__init.py__.py",
+      "source_location": "L1",
+      "id": "backend_app_init_py_py",
+      "community": 17,
+      "norm_label": "__init.py__.py"
+    },
+    {
+      "label": "routes.py",
+      "file_type": "code",
+      "source_file": "backend\\app\\api\\routes.py",
+      "source_location": "L1",
+      "id": "backend_app_api_routes_py",
+      "community": 0,
+      "norm_label": "routes.py"
+    },
+    {
+      "label": "generate_trace()",
+      "file_type": "code",
+      "source_file": "backend\\app\\api\\routes.py",
+      "source_location": "L11",
+      "id": "api_routes_generate_trace",
+      "community": 0,
+      "norm_label": "generate_trace()"
+    },
+    {
+      "label": "__init__.py",
+      "file_type": "code",
+      "source_file": "backend\\app\\api\\__init__.py",
+      "source_location": "L1",
+      "id": "backend_app_api_init_py",
+      "community": 18,
+      "norm_label": "__init__.py"
+    },
+    {
+      "label": "schemas.py",
+      "file_type": "code",
+      "source_file": "backend\\app\\models\\schemas.py",
+      "source_location": "L1",
+      "id": "backend_app_models_schemas_py",
+      "community": 0,
+      "norm_label": "schemas.py"
+    },
+    {
+      "label": "CodeRequest",
+      "file_type": "code",
+      "source_file": "backend\\app\\models\\schemas.py",
+      "source_location": "L8",
+      "id": "models_schemas_coderequest",
+      "community": 0,
+      "norm_label": "coderequest"
+    },
+    {
+      "label": "BaseModel",
+      "file_type": "code",
+      "source_file": "",
+      "source_location": "",
+      "id": "basemodel",
+      "community": 0,
+      "norm_label": "basemodel"
+    },
+    {
+      "label": "TraceStep",
+      "file_type": "code",
+      "source_file": "backend\\app\\models\\schemas.py",
+      "source_location": "L14",
+      "id": "models_schemas_tracestep",
+      "community": 0,
+      "norm_label": "tracestep"
+    },
+    {
+      "label": "TraceResponse",
+      "file_type": "code",
+      "source_file": "backend\\app\\models\\schemas.py",
+      "source_location": "L23",
+      "id": "models_schemas_traceresponse",
+      "community": 0,
+      "norm_label": "traceresponse"
+    },
+    {
+      "label": "__init__.py",
+      "file_type": "code",
+      "source_file": "backend\\app\\models\\__init__.py",
+      "source_location": "L1",
+      "id": "backend_app_models_init_py",
+      "community": 19,
+      "norm_label": "__init__.py"
+    },
+    {
+      "label": "file_manager.py",
+      "file_type": "code",
+      "source_file": "backend\\app\\services\\file_manager.py",
+      "source_location": "L1",
+      "id": "backend_app_services_file_manager_py",
+      "community": 10,
+      "norm_label": "file_manager.py"
+    },
+    {
+      "label": "write_to_sandbox()",
+      "file_type": "code",
+      "source_file": "backend\\app\\services\\file_manager.py",
+      "source_location": "L5",
+      "id": "services_file_manager_write_to_sandbox",
+      "community": 10,
+      "norm_label": "write_to_sandbox()"
+    },
+    {
+      "label": "runner.py",
+      "file_type": "code",
+      "source_file": "backend\\app\\services\\runner.py",
+      "source_location": "L1",
+      "id": "backend_app_services_runner_py",
+      "community": 4,
+      "norm_label": "runner.py"
+    },
+    {
+      "label": "compile_java()",
+      "file_type": "code",
+      "source_file": "backend\\app\\services\\runner.py",
+      "source_location": "L7",
+      "id": "services_runner_compile_java",
+      "community": 4,
+      "norm_label": "compile_java()"
+    },
+    {
+      "label": "execute_jdi_tracer()",
+      "file_type": "code",
+      "source_file": "backend\\app\\services\\runner.py",
+      "source_location": "L18",
+      "id": "services_runner_execute_jdi_tracer",
+      "community": 4,
+      "norm_label": "execute_jdi_tracer()"
+    },
+    {
+      "label": "__init__.py",
+      "file_type": "code",
+      "source_file": "backend\\app\\services\\__init__.py",
+      "source_location": "L1",
+      "id": "backend_app_services_init_py",
+      "community": 20,
+      "norm_label": "__init__.py"
+    },
+    {
+      "label": "Tracer.java",
+      "file_type": "code",
+      "source_file": "backend\\javatracer\\Tracer.java",
+      "source_location": "L1",
+      "id": "backend_javatracer_tracer_java",
+      "community": 2,
+      "norm_label": "tracer.java"
+    },
+    {
+      "label": "Tracer",
+      "file_type": "code",
+      "source_file": "backend\\javatracer\\Tracer.java",
+      "source_location": "L10",
+      "id": "javatracer_tracer_tracer",
+      "community": 2,
+      "norm_label": "tracer"
+    },
+    {
+      "label": ".main()",
+      "file_type": "code",
+      "source_file": "backend\\javatracer\\Tracer.java",
+      "source_location": "L11",
+      "id": "javatracer_tracer_tracer_main",
+      "community": 2,
+      "norm_label": ".main()"
+    },
+    {
+      "label": ".formatValue()",
+      "file_type": "code",
+      "source_file": "backend\\javatracer\\Tracer.java",
+      "source_location": "L130",
+      "id": "javatracer_tracer_tracer_formatvalue",
+      "community": 2,
+      "norm_label": ".formatvalue()"
+    },
+    {
+      "label": "BubbleSort.java",
+      "file_type": "code",
+      "source_file": "backend\\sandbox\\BubbleSort.java",
+      "source_location": "L1",
+      "id": "backend_sandbox_bubblesort_java",
+      "community": 5,
+      "norm_label": "bubblesort.java"
+    },
+    {
+      "label": "BubbleSort",
+      "file_type": "code",
+      "source_file": "backend\\sandbox\\BubbleSort.java",
+      "source_location": "L1",
+      "id": "sandbox_bubblesort_bubblesort",
+      "community": 5,
+      "norm_label": "bubblesort"
+    },
+    {
+      "label": ".main()",
+      "file_type": "code",
+      "source_file": "backend\\sandbox\\BubbleSort.java",
+      "source_location": "L2",
+      "id": "sandbox_bubblesort_bubblesort_main",
+      "community": 5,
+      "norm_label": ".main()"
+    },
+    {
+      "label": "Solution.java",
+      "file_type": "code",
+      "source_file": "backend\\sandbox\\Solution.java",
+      "source_location": "L1",
+      "id": "backend_sandbox_solution_java",
+      "community": 6,
+      "norm_label": "solution.java"
+    },
+    {
+      "label": "Solution",
+      "file_type": "code",
+      "source_file": "backend\\sandbox\\Solution.java",
+      "source_location": "L1",
+      "id": "sandbox_solution_solution",
+      "community": 6,
+      "norm_label": "solution"
+    },
+    {
+      "label": ".main()",
+      "file_type": "code",
+      "source_file": "backend\\sandbox\\Solution.java",
+      "source_location": "L2",
+      "id": "sandbox_solution_solution_main",
+      "community": 6,
+      "norm_label": ".main()"
+    },
+    {
+      "label": "TwoSum.java",
+      "file_type": "code",
+      "source_file": "backend\\sandbox\\TwoSum.java",
+      "source_location": "L1",
+      "id": "backend_sandbox_twosum_java",
+      "community": 7,
+      "norm_label": "twosum.java"
+    },
+    {
+      "label": "TwoSum",
+      "file_type": "code",
+      "source_file": "backend\\sandbox\\TwoSum.java",
+      "source_location": "L1",
+      "id": "sandbox_twosum_twosum",
+      "community": 7,
+      "norm_label": "twosum"
+    },
+    {
+      "label": ".main()",
+      "file_type": "code",
+      "source_file": "backend\\sandbox\\TwoSum.java",
+      "source_location": "L2",
+      "id": "sandbox_twosum_twosum_main",
+      "community": 7,
+      "norm_label": ".main()"
+    },
+    {
+      "label": "eslint.config.mjs",
+      "file_type": "code",
+      "source_file": "frontend\\eslint.config.mjs",
+      "source_location": "L1",
+      "id": "frontend_eslint_config_mjs",
+      "community": 21,
+      "norm_label": "eslint.config.mjs"
+    },
+    {
+      "label": "next-env.d.ts",
+      "file_type": "code",
+      "source_file": "frontend\\next-env.d.ts",
+      "source_location": "L1",
+      "id": "frontend_next_env_d_ts",
+      "community": 22,
+      "norm_label": "next-env.d.ts"
+    },
+    {
+      "label": "next.config.ts",
+      "file_type": "code",
+      "source_file": "frontend\\next.config.ts",
+      "source_location": "L1",
+      "id": "frontend_next_config_ts",
+      "community": 23,
+      "norm_label": "next.config.ts"
+    },
+    {
+      "label": "postcss.config.mjs",
+      "file_type": "code",
+      "source_file": "frontend\\postcss.config.mjs",
+      "source_location": "L1",
+      "id": "frontend_postcss_config_mjs",
+      "community": 24,
+      "norm_label": "postcss.config.mjs"
+    },
+    {
+      "label": "icon.tsx",
+      "file_type": "code",
+      "source_file": "frontend\\src\\app\\icon.tsx",
+      "source_location": "L1",
+      "id": "frontend_src_app_icon_tsx",
+      "community": 25,
+      "norm_label": "icon.tsx"
+    },
+    {
+      "label": "layout.tsx",
+      "file_type": "code",
+      "source_file": "frontend\\src\\app\\layout.tsx",
+      "source_location": "L1",
+      "id": "frontend_src_app_layout_tsx",
+      "community": 11,
+      "norm_label": "layout.tsx"
+    },
+    {
+      "label": "RootLayout()",
+      "file_type": "code",
+      "source_file": "frontend\\src\\app\\layout.tsx",
+      "source_location": "L20",
+      "id": "app_layout_rootlayout",
+      "community": 11,
+      "norm_label": "rootlayout()"
+    },
+    {
+      "label": "page.tsx",
+      "file_type": "code",
+      "source_file": "frontend\\src\\app\\page.tsx",
+      "source_location": "L1",
+      "id": "frontend_src_app_page_tsx",
+      "community": 1,
+      "norm_label": "page.tsx"
+    },
+    {
+      "label": "handleSelectPreset()",
+      "file_type": "code",
+      "source_file": "frontend\\src\\app\\page.tsx",
+      "source_location": "L55",
+      "id": "app_page_handleselectpreset",
+      "community": 1,
+      "norm_label": "handleselectpreset()"
+    },
+    {
+      "label": "handleRunTrace()",
+      "file_type": "code",
+      "source_file": "frontend\\src\\app\\page.tsx",
+      "source_location": "L75",
+      "id": "app_page_handleruntrace",
+      "community": 1,
+      "norm_label": "handleruntrace()"
+    },
+    {
+      "label": "handleReset()",
+      "file_type": "code",
+      "source_file": "frontend\\src\\app\\page.tsx",
+      "source_location": "L118",
+      "id": "app_page_handlereset",
+      "community": 1,
+      "norm_label": "handlereset()"
+    },
+    {
+      "label": "handleTogglePlay()",
+      "file_type": "code",
+      "source_file": "frontend\\src\\app\\page.tsx",
+      "source_location": "L123",
+      "id": "app_page_handletoggleplay",
+      "community": 1,
+      "norm_label": "handletoggleplay()"
+    },
+    {
+      "label": "isInputOrEditor()",
+      "file_type": "code",
+      "source_file": "frontend\\src\\app\\page.tsx",
+      "source_location": "L157",
+      "id": "app_page_isinputoreditor",
+      "community": 1,
+      "norm_label": "isinputoreditor()"
+    },
+    {
+      "label": "handleKeyDown()",
+      "file_type": "code",
+      "source_file": "frontend\\src\\app\\page.tsx",
+      "source_location": "L170",
+      "id": "app_page_handlekeydown",
+      "community": 1,
+      "norm_label": "handlekeydown()"
+    },
+    {
+      "label": "CodeEditor.tsx",
+      "file_type": "code",
+      "source_file": "frontend\\src\\components\\CodeEditor.tsx",
+      "source_location": "L1",
+      "id": "frontend_src_components_codeeditor_tsx",
+      "community": 8,
+      "norm_label": "codeeditor.tsx"
+    },
+    {
+      "label": "handleBeforeMount()",
+      "file_type": "code",
+      "source_file": "frontend\\src\\components\\CodeEditor.tsx",
+      "source_location": "L28",
+      "id": "components_codeeditor_handlebeforemount",
+      "community": 8,
+      "norm_label": "handlebeforemount()"
+    },
+    {
+      "label": "handleEditorDidMount()",
+      "file_type": "code",
+      "source_file": "frontend\\src\\components\\CodeEditor.tsx",
+      "source_location": "L126",
+      "id": "components_codeeditor_handleeditordidmount",
+      "community": 8,
+      "norm_label": "handleeditordidmount()"
+    },
+    {
+      "label": "ConsoleOutput.tsx",
+      "file_type": "code",
+      "source_file": "frontend\\src\\components\\ConsoleOutput.tsx",
+      "source_location": "L1",
+      "id": "frontend_src_components_consoleoutput_tsx",
+      "community": 26,
+      "norm_label": "consoleoutput.tsx"
+    },
+    {
+      "label": "Header.tsx",
+      "file_type": "code",
+      "source_file": "frontend\\src\\components\\Header.tsx",
+      "source_location": "L1",
+      "id": "frontend_src_components_header_tsx",
+      "community": 27,
+      "norm_label": "header.tsx"
+    },
+    {
+      "label": "PlaybackBar.tsx",
+      "file_type": "code",
+      "source_file": "frontend\\src\\components\\PlaybackBar.tsx",
+      "source_location": "L1",
+      "id": "frontend_src_components_playbackbar_tsx",
+      "community": 12,
+      "norm_label": "playbackbar.tsx"
+    },
+    {
+      "label": "handleJumpToEnd()",
+      "file_type": "code",
+      "source_file": "frontend\\src\\components\\PlaybackBar.tsx",
+      "source_location": "L41",
+      "id": "components_playbackbar_handlejumptoend",
+      "community": 12,
+      "norm_label": "handlejumptoend()"
+    },
+    {
+      "label": "ArrayBlock.tsx",
+      "file_type": "code",
+      "source_file": "frontend\\src\\components\\Visualizer\\ArrayBlock.tsx",
+      "source_location": "L1",
+      "id": "frontend_src_components_visualizer_arrayblock_tsx",
+      "community": 3,
+      "norm_label": "arrayblock.tsx"
+    },
+    {
+      "label": "createBeveledBlockGeometry()",
+      "file_type": "code",
+      "source_file": "frontend\\src\\components\\Visualizer\\ArrayBlock.tsx",
+      "source_location": "L34",
+      "id": "visualizer_arrayblock_createbeveledblockgeometry",
+      "community": 3,
+      "norm_label": "createbeveledblockgeometry()"
+    },
+    {
+      "label": "createIndexTexture()",
+      "file_type": "code",
+      "source_file": "frontend\\src\\components\\Visualizer\\ArrayBlock.tsx",
+      "source_location": "L65",
+      "id": "visualizer_arrayblock_createindextexture",
+      "community": 3,
+      "norm_label": "createindextexture()"
+    },
+    {
+      "label": "ThreeArrayScene()",
+      "file_type": "code",
+      "source_file": "frontend\\src\\components\\Visualizer\\ArrayBlock.tsx",
+      "source_location": "L84",
+      "id": "visualizer_arrayblock_threearrayscene",
+      "community": 3,
+      "norm_label": "threearrayscene()"
+    },
+    {
+      "label": "ArrayVisualizer.tsx",
+      "file_type": "code",
+      "source_file": "frontend\\src\\components\\Visualizer\\ArrayVisualizer.tsx",
+      "source_location": "L1",
+      "id": "frontend_src_components_visualizer_arrayvisualizer_tsx",
+      "community": 28,
+      "norm_label": "arrayvisualizer.tsx"
+    },
+    {
+      "label": "CallStackVisualizer.tsx",
+      "file_type": "code",
+      "source_file": "frontend\\src\\components\\Visualizer\\CallStackVisualizer.tsx",
+      "source_location": "L1",
+      "id": "frontend_src_components_visualizer_callstackvisualizer_tsx",
+      "community": 29,
+      "norm_label": "callstackvisualizer.tsx"
+    },
+    {
+      "label": "CNCScannerPointer.tsx",
+      "file_type": "code",
+      "source_file": "frontend\\src\\components\\Visualizer\\CNCScannerPointer.tsx",
+      "source_location": "L1",
+      "id": "frontend_src_components_visualizer_cncscannerpointer_tsx",
+      "community": 13,
+      "norm_label": "cncscannerpointer.tsx"
+    },
+    {
+      "label": "CNCScannerHead()",
+      "file_type": "code",
+      "source_file": "frontend\\src\\components\\Visualizer\\CNCScannerPointer.tsx",
+      "source_location": "L15",
+      "id": "visualizer_cncscannerpointer_cncscannerhead",
+      "community": 13,
+      "norm_label": "cncscannerhead()"
+    },
+    {
+      "label": "GlassMonolith.tsx",
+      "file_type": "code",
+      "source_file": "frontend\\src\\components\\Visualizer\\GlassMonolith.tsx",
+      "source_location": "L1",
+      "id": "frontend_src_components_visualizer_glassmonolith_tsx",
+      "community": 14,
+      "norm_label": "glassmonolith.tsx"
+    },
+    {
+      "label": "ArrayBase()",
+      "file_type": "code",
+      "source_file": "frontend\\src\\components\\Visualizer\\GlassMonolith.tsx",
+      "source_location": "L21",
+      "id": "visualizer_glassmonolith_arraybase",
+      "community": 14,
+      "norm_label": "arraybase()"
+    },
+    {
+      "label": "StateVisualizer.tsx",
+      "file_type": "code",
+      "source_file": "frontend\\src\\components\\Visualizer\\StateVisualizer.tsx",
+      "source_location": "L1",
+      "id": "frontend_src_components_visualizer_statevisualizer_tsx",
+      "community": 30,
+      "norm_label": "statevisualizer.tsx"
+    },
+    {
+      "label": "VariableCard.tsx",
+      "file_type": "code",
+      "source_file": "frontend\\src\\components\\Visualizer\\VariableCard.tsx",
+      "source_location": "L1",
+      "id": "frontend_src_components_visualizer_variablecard_tsx",
+      "community": 15,
+      "norm_label": "variablecard.tsx"
+    },
+    {
+      "label": "VariableCard()",
+      "file_type": "code",
+      "source_file": "frontend\\src\\components\\Visualizer\\VariableCard.tsx",
+      "source_location": "L14",
+      "id": "visualizer_variablecard_variablecard",
+      "community": 15,
+      "norm_label": "variablecard()"
+    },
+    {
+      "label": "objectPermanence.ts",
+      "file_type": "code",
+      "source_file": "frontend\\src\\lib\\objectPermanence.ts",
+      "source_location": "L1",
+      "id": "frontend_src_lib_objectpermanence_ts",
+      "community": 16,
+      "norm_label": "objectpermanence.ts"
+    },
+    {
+      "label": "computeGlobalTraceBlocks()",
+      "file_type": "code",
+      "source_file": "frontend\\src\\lib\\objectPermanence.ts",
+      "source_location": "L31",
+      "id": "lib_objectpermanence_computeglobaltraceblocks",
+      "community": 16,
+      "norm_label": "computeglobaltraceblocks()"
+    },
+    {
+      "label": "presets.ts",
+      "file_type": "code",
+      "source_file": "frontend\\src\\lib\\presets.ts",
+      "source_location": "L1",
+      "id": "frontend_src_lib_presets_ts",
+      "community": 31,
+      "norm_label": "presets.ts"
+    },
+    {
+      "label": "tracer.ts",
+      "file_type": "code",
+      "source_file": "frontend\\src\\types\\tracer.ts",
+      "source_location": "L1",
+      "id": "frontend_src_types_tracer_ts",
+      "community": 32,
+      "norm_label": "tracer.ts"
+    }
+  ],
+  "links": [
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend\\app\\main.py",
+      "source_location": "L28",
+      "weight": 1.0,
+      "_src": "backend_app_main_py",
+      "_tgt": "app_main_health_check",
+      "source": "backend_app_main_py",
+      "target": "app_main_health_check",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend\\app\\api\\routes.py",
+      "source_location": "L11",
+      "weight": 1.0,
+      "_src": "backend_app_api_routes_py",
+      "_tgt": "api_routes_generate_trace",
+      "source": "backend_app_api_routes_py",
+      "target": "api_routes_generate_trace",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "backend\\app\\api\\routes.py",
+      "source_location": "L16",
+      "weight": 1.0,
+      "_src": "api_routes_generate_trace",
+      "_tgt": "models_schemas_traceresponse",
+      "source": "api_routes_generate_trace",
+      "target": "models_schemas_traceresponse"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend\\app\\models\\schemas.py",
+      "source_location": "L8",
+      "weight": 1.0,
+      "_src": "backend_app_models_schemas_py",
+      "_tgt": "models_schemas_coderequest",
+      "source": "backend_app_models_schemas_py",
+      "target": "models_schemas_coderequest",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend\\app\\models\\schemas.py",
+      "source_location": "L14",
+      "weight": 1.0,
+      "_src": "backend_app_models_schemas_py",
+      "_tgt": "models_schemas_tracestep",
+      "source": "backend_app_models_schemas_py",
+      "target": "models_schemas_tracestep",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend\\app\\models\\schemas.py",
+      "source_location": "L23",
+      "weight": 1.0,
+      "_src": "backend_app_models_schemas_py",
+      "_tgt": "models_schemas_traceresponse",
+      "source": "backend_app_models_schemas_py",
+      "target": "models_schemas_traceresponse",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "backend\\app\\models\\schemas.py",
+      "source_location": "L8",
+      "weight": 1.0,
+      "_src": "models_schemas_coderequest",
+      "_tgt": "basemodel",
+      "source": "models_schemas_coderequest",
+      "target": "basemodel",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "backend\\app\\models\\schemas.py",
+      "source_location": "L14",
+      "weight": 1.0,
+      "_src": "models_schemas_tracestep",
+      "_tgt": "basemodel",
+      "source": "basemodel",
+      "target": "models_schemas_tracestep",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "backend\\app\\models\\schemas.py",
+      "source_location": "L23",
+      "weight": 1.0,
+      "_src": "models_schemas_traceresponse",
+      "_tgt": "basemodel",
+      "source": "basemodel",
+      "target": "models_schemas_traceresponse",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend\\app\\services\\file_manager.py",
+      "source_location": "L5",
+      "weight": 1.0,
+      "_src": "backend_app_services_file_manager_py",
+      "_tgt": "services_file_manager_write_to_sandbox",
+      "source": "backend_app_services_file_manager_py",
+      "target": "services_file_manager_write_to_sandbox",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend\\app\\services\\runner.py",
+      "source_location": "L7",
+      "weight": 1.0,
+      "_src": "backend_app_services_runner_py",
+      "_tgt": "services_runner_compile_java",
+      "source": "backend_app_services_runner_py",
+      "target": "services_runner_compile_java",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend\\app\\services\\runner.py",
+      "source_location": "L18",
+      "weight": 1.0,
+      "_src": "backend_app_services_runner_py",
+      "_tgt": "services_runner_execute_jdi_tracer",
+      "source": "backend_app_services_runner_py",
+      "target": "services_runner_execute_jdi_tracer",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend\\javatracer\\Tracer.java",
+      "source_location": "L10",
+      "weight": 1.0,
+      "_src": "backend_javatracer_tracer_java",
+      "_tgt": "javatracer_tracer_tracer",
+      "source": "backend_javatracer_tracer_java",
+      "target": "javatracer_tracer_tracer",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "backend\\javatracer\\Tracer.java",
+      "source_location": "L11",
+      "weight": 1.0,
+      "_src": "javatracer_tracer_tracer",
+      "_tgt": "javatracer_tracer_tracer_main",
+      "source": "javatracer_tracer_tracer",
+      "target": "javatracer_tracer_tracer_main",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "backend\\javatracer\\Tracer.java",
+      "source_location": "L130",
+      "weight": 1.0,
+      "_src": "javatracer_tracer_tracer",
+      "_tgt": "javatracer_tracer_tracer_formatvalue",
+      "source": "javatracer_tracer_tracer",
+      "target": "javatracer_tracer_tracer_formatvalue",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "backend\\javatracer\\Tracer.java",
+      "source_location": "L86",
+      "weight": 1.0,
+      "_src": "javatracer_tracer_tracer_main",
+      "_tgt": "javatracer_tracer_tracer_formatvalue",
+      "source": "javatracer_tracer_tracer_main",
+      "target": "javatracer_tracer_tracer_formatvalue",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend\\sandbox\\BubbleSort.java",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_src": "backend_sandbox_bubblesort_java",
+      "_tgt": "sandbox_bubblesort_bubblesort",
+      "source": "backend_sandbox_bubblesort_java",
+      "target": "sandbox_bubblesort_bubblesort",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "backend\\sandbox\\BubbleSort.java",
+      "source_location": "L2",
+      "weight": 1.0,
+      "_src": "sandbox_bubblesort_bubblesort",
+      "_tgt": "sandbox_bubblesort_bubblesort_main",
+      "source": "sandbox_bubblesort_bubblesort",
+      "target": "sandbox_bubblesort_bubblesort_main",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend\\sandbox\\Solution.java",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_src": "backend_sandbox_solution_java",
+      "_tgt": "sandbox_solution_solution",
+      "source": "backend_sandbox_solution_java",
+      "target": "sandbox_solution_solution",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "backend\\sandbox\\Solution.java",
+      "source_location": "L2",
+      "weight": 1.0,
+      "_src": "sandbox_solution_solution",
+      "_tgt": "sandbox_solution_solution_main",
+      "source": "sandbox_solution_solution",
+      "target": "sandbox_solution_solution_main",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend\\sandbox\\TwoSum.java",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_src": "backend_sandbox_twosum_java",
+      "_tgt": "sandbox_twosum_twosum",
+      "source": "backend_sandbox_twosum_java",
+      "target": "sandbox_twosum_twosum",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "backend\\sandbox\\TwoSum.java",
+      "source_location": "L2",
+      "weight": 1.0,
+      "_src": "sandbox_twosum_twosum",
+      "_tgt": "sandbox_twosum_twosum_main",
+      "source": "sandbox_twosum_twosum",
+      "target": "sandbox_twosum_twosum_main",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "frontend\\src\\app\\layout.tsx",
+      "source_location": "L20",
+      "weight": 1.0,
+      "_src": "frontend_src_app_layout_tsx",
+      "_tgt": "app_layout_rootlayout",
+      "source": "frontend_src_app_layout_tsx",
+      "target": "app_layout_rootlayout",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "frontend\\src\\app\\page.tsx",
+      "source_location": "L55",
+      "weight": 1.0,
+      "_src": "frontend_src_app_page_tsx",
+      "_tgt": "app_page_handleselectpreset",
+      "source": "frontend_src_app_page_tsx",
+      "target": "app_page_handleselectpreset",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "frontend\\src\\app\\page.tsx",
+      "source_location": "L75",
+      "weight": 1.0,
+      "_src": "frontend_src_app_page_tsx",
+      "_tgt": "app_page_handleruntrace",
+      "source": "frontend_src_app_page_tsx",
+      "target": "app_page_handleruntrace",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "frontend\\src\\app\\page.tsx",
+      "source_location": "L118",
+      "weight": 1.0,
+      "_src": "frontend_src_app_page_tsx",
+      "_tgt": "app_page_handlereset",
+      "source": "frontend_src_app_page_tsx",
+      "target": "app_page_handlereset",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "frontend\\src\\app\\page.tsx",
+      "source_location": "L123",
+      "weight": 1.0,
+      "_src": "frontend_src_app_page_tsx",
+      "_tgt": "app_page_handletoggleplay",
+      "source": "frontend_src_app_page_tsx",
+      "target": "app_page_handletoggleplay",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "frontend\\src\\app\\page.tsx",
+      "source_location": "L157",
+      "weight": 1.0,
+      "_src": "frontend_src_app_page_tsx",
+      "_tgt": "app_page_isinputoreditor",
+      "source": "frontend_src_app_page_tsx",
+      "target": "app_page_isinputoreditor",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "frontend\\src\\app\\page.tsx",
+      "source_location": "L170",
+      "weight": 1.0,
+      "_src": "frontend_src_app_page_tsx",
+      "_tgt": "app_page_handlekeydown",
+      "source": "frontend_src_app_page_tsx",
+      "target": "app_page_handlekeydown",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "frontend\\src\\app\\page.tsx",
+      "source_location": "L178",
+      "weight": 1.0,
+      "_src": "app_page_handlekeydown",
+      "_tgt": "app_page_handleruntrace",
+      "source": "app_page_handleruntrace",
+      "target": "app_page_handlekeydown",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "frontend\\src\\app\\page.tsx",
+      "source_location": "L188",
+      "weight": 1.0,
+      "_src": "app_page_handlekeydown",
+      "_tgt": "app_page_handletoggleplay",
+      "source": "app_page_handletoggleplay",
+      "target": "app_page_handlekeydown",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "frontend\\src\\app\\page.tsx",
+      "source_location": "L174",
+      "weight": 1.0,
+      "_src": "app_page_handlekeydown",
+      "_tgt": "app_page_isinputoreditor",
+      "source": "app_page_isinputoreditor",
+      "target": "app_page_handlekeydown",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "frontend\\src\\components\\CodeEditor.tsx",
+      "source_location": "L28",
+      "weight": 1.0,
+      "_src": "frontend_src_components_codeeditor_tsx",
+      "_tgt": "components_codeeditor_handlebeforemount",
+      "source": "frontend_src_components_codeeditor_tsx",
+      "target": "components_codeeditor_handlebeforemount",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "frontend\\src\\components\\CodeEditor.tsx",
+      "source_location": "L126",
+      "weight": 1.0,
+      "_src": "frontend_src_components_codeeditor_tsx",
+      "_tgt": "components_codeeditor_handleeditordidmount",
+      "source": "frontend_src_components_codeeditor_tsx",
+      "target": "components_codeeditor_handleeditordidmount",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "frontend\\src\\components\\PlaybackBar.tsx",
+      "source_location": "L41",
+      "weight": 1.0,
+      "_src": "frontend_src_components_playbackbar_tsx",
+      "_tgt": "components_playbackbar_handlejumptoend",
+      "source": "frontend_src_components_playbackbar_tsx",
+      "target": "components_playbackbar_handlejumptoend",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "frontend\\src\\components\\Visualizer\\ArrayBlock.tsx",
+      "source_location": "L34",
+      "weight": 1.0,
+      "_src": "frontend_src_components_visualizer_arrayblock_tsx",
+      "_tgt": "visualizer_arrayblock_createbeveledblockgeometry",
+      "source": "frontend_src_components_visualizer_arrayblock_tsx",
+      "target": "visualizer_arrayblock_createbeveledblockgeometry",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "frontend\\src\\components\\Visualizer\\ArrayBlock.tsx",
+      "source_location": "L65",
+      "weight": 1.0,
+      "_src": "frontend_src_components_visualizer_arrayblock_tsx",
+      "_tgt": "visualizer_arrayblock_createindextexture",
+      "source": "frontend_src_components_visualizer_arrayblock_tsx",
+      "target": "visualizer_arrayblock_createindextexture",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "frontend\\src\\components\\Visualizer\\ArrayBlock.tsx",
+      "source_location": "L84",
+      "weight": 1.0,
+      "_src": "frontend_src_components_visualizer_arrayblock_tsx",
+      "_tgt": "visualizer_arrayblock_threearrayscene",
+      "source": "frontend_src_components_visualizer_arrayblock_tsx",
+      "target": "visualizer_arrayblock_threearrayscene",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "frontend\\src\\components\\Visualizer\\CNCScannerPointer.tsx",
+      "source_location": "L15",
+      "weight": 1.0,
+      "_src": "frontend_src_components_visualizer_cncscannerpointer_tsx",
+      "_tgt": "visualizer_cncscannerpointer_cncscannerhead",
+      "source": "frontend_src_components_visualizer_cncscannerpointer_tsx",
+      "target": "visualizer_cncscannerpointer_cncscannerhead",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "frontend\\src\\components\\Visualizer\\GlassMonolith.tsx",
+      "source_location": "L21",
+      "weight": 1.0,
+      "_src": "frontend_src_components_visualizer_glassmonolith_tsx",
+      "_tgt": "visualizer_glassmonolith_arraybase",
+      "source": "frontend_src_components_visualizer_glassmonolith_tsx",
+      "target": "visualizer_glassmonolith_arraybase",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "frontend\\src\\components\\Visualizer\\VariableCard.tsx",
+      "source_location": "L14",
+      "weight": 1.0,
+      "_src": "frontend_src_components_visualizer_variablecard_tsx",
+      "_tgt": "visualizer_variablecard_variablecard",
+      "source": "frontend_src_components_visualizer_variablecard_tsx",
+      "target": "visualizer_variablecard_variablecard",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "frontend\\src\\lib\\objectPermanence.ts",
+      "source_location": "L31",
+      "weight": 1.0,
+      "_src": "frontend_src_lib_objectpermanence_ts",
+      "_tgt": "lib_objectpermanence_computeglobaltraceblocks",
+      "source": "frontend_src_lib_objectpermanence_ts",
+      "target": "lib_objectpermanence_computeglobaltraceblocks",
+      "confidence_score": 1.0
+    }
+  ],
+  "hyperedges": []
+}

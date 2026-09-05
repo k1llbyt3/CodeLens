@@ -98,7 +98,18 @@ export const PRESETS: AlgorithmPreset[] = [
       { step: 19, line: 11, locals: { arr: [1, 4, 5, 2], n: 4, i: 0, j: 2, temp: 5 }, callStack: ["Solution.main"], stdout: "Initial array length: 4" },
       { step: 20, line: 12, locals: { arr: [1, 4, 2, 2], n: 4, i: 0, j: 2, temp: 5 }, callStack: ["Solution.main"], stdout: "Initial array length: 4" },
       { step: 21, line: 13, locals: { arr: [1, 4, 2, 5], n: 4, i: 0, j: 2, temp: 5 }, callStack: ["Solution.main"], stdout: "Initial array length: 4" },
-      { step: 22, line: 17, locals: { arr: [1, 2, 4, 5], n: 4, i: 3 }, callStack: ["Solution.main"], stdout: "Initial array length: 4\nSorting completed." }
+      { step: 22, line: 8, locals: { arr: [1, 4, 2, 5], n: 4, i: 1 }, callStack: ["Solution.main"], stdout: "Initial array length: 4" },
+      { step: 23, line: 9, locals: { arr: [1, 4, 2, 5], n: 4, i: 1, j: 0 }, callStack: ["Solution.main"], stdout: "Initial array length: 4" },
+      { step: 24, line: 10, locals: { arr: [1, 4, 2, 5], n: 4, i: 1, j: 0 }, callStack: ["Solution.main"], stdout: "Initial array length: 4" },
+      { step: 25, line: 9, locals: { arr: [1, 4, 2, 5], n: 4, i: 1, j: 1 }, callStack: ["Solution.main"], stdout: "Initial array length: 4" },
+      { step: 26, line: 10, locals: { arr: [1, 4, 2, 5], n: 4, i: 1, j: 1 }, callStack: ["Solution.main"], stdout: "Initial array length: 4" },
+      { step: 27, line: 11, locals: { arr: [1, 4, 2, 5], n: 4, i: 1, j: 1, temp: 4 }, callStack: ["Solution.main"], stdout: "Initial array length: 4" },
+      { step: 28, line: 12, locals: { arr: [1, 2, 2, 5], n: 4, i: 1, j: 1, temp: 4 }, callStack: ["Solution.main"], stdout: "Initial array length: 4" },
+      { step: 29, line: 13, locals: { arr: [1, 2, 4, 5], n: 4, i: 1, j: 1, temp: 4 }, callStack: ["Solution.main"], stdout: "Initial array length: 4" },
+      { step: 30, line: 8, locals: { arr: [1, 2, 4, 5], n: 4, i: 2 }, callStack: ["Solution.main"], stdout: "Initial array length: 4" },
+      { step: 31, line: 9, locals: { arr: [1, 2, 4, 5], n: 4, i: 2, j: 0 }, callStack: ["Solution.main"], stdout: "Initial array length: 4" },
+      { step: 32, line: 10, locals: { arr: [1, 2, 4, 5], n: 4, i: 2, j: 0 }, callStack: ["Solution.main"], stdout: "Initial array length: 4" },
+      { step: 33, line: 17, locals: { arr: [1, 2, 4, 5], n: 4, i: 3 }, callStack: ["Solution.main"], stdout: "Initial array length: 4\nSorting completed." }
     ]
   }
 ];

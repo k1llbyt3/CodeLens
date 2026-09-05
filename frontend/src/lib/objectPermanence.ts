@@ -198,7 +198,7 @@ export function computeGlobalTraceBlocks(
 
         pointers.push({ name: k, index: val, actionType });
 
-        if (k === "j" && val + 1 >= 0 && val + 1 < currentBlocks.length) {
+        if (k === "j" && hasJPlus1 && val + 1 >= 0 && val + 1 < currentBlocks.length) {
           const isJPlus1InSwap =
             activeSwapIndices &&
             (val + 1 === activeSwapIndices[0] || val + 1 === activeSwapIndices[1]);
@@ -222,6 +222,11 @@ export function computeGlobalTraceBlocks(
       let status: BlockStatus = "idle";
       let isMoving = false;
 
+      const currentVal =
+        Array.isArray(currLocals?.[arrName]) && currLocals[arrName][idx] !== undefined
+          ? currLocals[arrName][idx]
+          : block.val;
+
       const prevIdx = prevIds.indexOf(block.id);
       if (prevIdx !== -1 && prevIdx !== idx) {
         isMoving = true;
@@ -240,13 +245,14 @@ export function computeGlobalTraceBlocks(
         }
       }
 
-      const num = Number(block.val);
+      const num = Number(currentVal);
       if (!isNaN(num) && isFinite(num) && num > globalMax) {
         globalMax = num;
       }
 
       return {
         ...block,
+        val: currentVal,
         status,
         isMoving
       };

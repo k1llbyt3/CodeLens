@@ -9,6 +9,10 @@ export interface ArrayVisualizerProps {
   pointers?: any[];
   maxVal?: number;
   swapIndices?: [number, number] | null;
+  isCountingLength?: boolean;
+  currentFrame?: any;
+  activeLineCode?: string;
+  currentStep?: number;
   [key: string]: any;
 }
 
@@ -18,6 +22,10 @@ export const ArrayVisualizer: React.FC<ArrayVisualizerProps> = ({
   pointers = [],
   maxVal,
   swapIndices = null,
+  isCountingLength = false,
+  currentFrame,
+  activeLineCode = "",
+  currentStep = 0,
 }) => {
   const [activeOverrideIdx, setActiveOverrideIdx] = useState<number | null>(null);
 
@@ -42,19 +50,16 @@ export const ArrayVisualizer: React.FC<ArrayVisualizerProps> = ({
           b?.state === "active" ||
           isSwapping ||
           activeOverrideIdx === i;
-        const state = b?.state || (isActive ? "active" : b?.status === "reading" ? "amber" : "default");
+        const state = isSwapping
+          ? "amber"
+          : b?.state || (isActive ? "active" : b?.status === "reading" ? "amber" : "default");
         return {
           val,
           state,
         };
       });
     } else {
-      // Default fallback if no blocks provided: [15, 4, 7, 8]
-      const fallback = [15, 4, 7, 8];
-      rawVals = fallback.map((num, i) => ({
-        val: num,
-        state: i === 1 ? "amber" : i === 2 ? "green" : "default",
-      }));
+      rawVals = [];
     }
 
     const calculatedMax =
@@ -78,13 +83,17 @@ export const ArrayVisualizer: React.FC<ArrayVisualizerProps> = ({
 
   const count = currentArray.length;
 
+  if (count === 0) {
+    return null;
+  }
+
   // Shared geometry constants strictly locked to Three.js base & block layout
   const itemWidth = 84;
-  const gap = 26;
+  const gap = 36;
   const paddingX = 36;
-  const contentWidth = count * itemWidth + (count - 1) * gap;
-  const totalWidth = 2 * paddingX + contentWidth;
-  const sceneHeight = 275;
+  const contentWidth = count * itemWidth + Math.max(0, count - 1) * gap;
+  const totalWidth = Math.max(300, 2 * paddingX + contentWidth);
+  const sceneHeight = 310;
 
   // Normalize pointers list for any number of dynamic pointers
   const normalizedPointers = useMemo(() => {
@@ -115,12 +124,12 @@ export const ArrayVisualizer: React.FC<ArrayVisualizerProps> = ({
         ? firstPointer.index
         : null
       : null;
-  const pointerLabel: string = firstPointer?.name || firstPointer?.label || "j";
+  const pointerLabel: string = firstPointer?.name || firstPointer?.label || "";
 
   return (
     <div className="flex flex-col items-center justify-center w-full select-none">
       {/* Visualizer Header */}
-      <div className="w-full max-w-4xl mb-6 flex flex-wrap items-center justify-between gap-3 px-2">
+      <div className="w-full max-w-4xl mb-4 flex flex-wrap items-center justify-between gap-3 px-2">
         <div className="flex items-center gap-2">
           {name && (
             <span className="text-xs font-mono font-semibold px-2 py-1 rounded bg-white/[0.06] text-neutral-300 border border-white/[0.08]">
@@ -128,7 +137,7 @@ export const ArrayVisualizer: React.FC<ArrayVisualizerProps> = ({
             </span>
           )}
           <span className="text-xs font-mono text-neutral-400">
-            Array Visualizer &bull; <span className="text-neutral-200">{count} elements</span> &bull; Max Val:{" "}
+            Array Visualizer &bull; <span className="text-neutral-200 font-semibold">{count} elements</span> &bull; Max:{" "}
             <span className="text-cyan-400 font-semibold">{computedMax}</span>
           </span>
         </div>
@@ -153,6 +162,11 @@ export const ArrayVisualizer: React.FC<ArrayVisualizerProps> = ({
             pointerIndex={pointerIndex}
             pointerLabel={pointerLabel}
             pointers={normalizedPointers}
+            swapIndices={swapIndices}
+            isCountingLength={isCountingLength}
+            currentFrame={currentFrame}
+            activeLineCode={activeLineCode}
+            currentStep={currentStep}
             onBlockClick={(idx) => setActiveOverrideIdx(activeOverrideIdx === idx ? null : idx)}
           />
         </div>

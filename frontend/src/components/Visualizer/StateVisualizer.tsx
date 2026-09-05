@@ -127,7 +127,9 @@ export const StateVisualizer: React.FC<StateVisualizerProps> = ({
 
   const primitiveEntries = Object.entries(persistentPrimitives).reverse();
   const callStack = currentFrame?.callStack || ["Solution.main"];
-  const isCountingLength = activeLineCode.includes("arr.length") || (currentFrame?.line === 4);
+  const isCountingLength = Boolean(
+    /\b(int|var|let|const)?\s*([a-zA-Z_]\w*)\s*=\s*([a-zA-Z_]\w*)\.length\b|\b([a-zA-Z_]\w*)\s*=\s*len\s*\(/.test(activeLineCode)
+  );
 
   const stepNewStdout = useMemo(() => {
     if (!currentFrame?.stdout) return null;
@@ -280,7 +282,7 @@ export const StateVisualizer: React.FC<StateVisualizerProps> = ({
             </div>
           ) : (
             <div className="space-y-4">
-              {arrayStateList.length > 0 ? (
+              {arrayStateList.length > 0 &&
                 arrayStateList.map((state) => (
                   <ArrayVisualizer
                     key={state.name}
@@ -291,11 +293,10 @@ export const StateVisualizer: React.FC<StateVisualizerProps> = ({
                     swapIndices={state.swapIndices}
                     currentStep={currentStep}
                     isCountingLength={isCountingLength}
+                    currentFrame={currentFrame}
+                    activeLineCode={activeLineCode}
                   />
-                ))
-              ) : (
-                <ArrayVisualizer />
-              )}
+                ))}
 
               {primitiveEntries.length > 0 && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
