@@ -562,12 +562,21 @@
       "norm_label": "arraybase()"
     },
     {
+      "label": "MemoryTable.tsx",
+      "file_type": "code",
+      "source_file": "frontend\\src\\components\\Visualizer\\MemoryTable.tsx",
+      "source_location": "L1",
+      "id": "frontend_src_components_visualizer_memorytable_tsx",
+      "community": 30,
+      "norm_label": "memorytable.tsx"
+    },
+    {
       "label": "StateVisualizer.tsx",
       "file_type": "code",
       "source_file": "frontend\\src\\components\\Visualizer\\StateVisualizer.tsx",
       "source_location": "L1",
       "id": "frontend_src_components_visualizer_statevisualizer_tsx",
-      "community": 30,
+      "community": 31,
       "norm_label": "statevisualizer.tsx"
     },
     {
@@ -612,7 +621,7 @@
       "source_file": "frontend\\src\\lib\\presets.ts",
       "source_location": "L1",
       "id": "frontend_src_lib_presets_ts",
-      "community": 31,
+      "community": 32,
       "norm_label": "presets.ts"
     },
     {
@@ -621,7 +630,7 @@
       "source_file": "frontend\\src\\types\\tracer.ts",
       "source_location": "L1",
       "id": "frontend_src_types_tracer_ts",
-      "community": 32,
+      "community": 33,
       "norm_label": "tracer.ts"
     }
   ],

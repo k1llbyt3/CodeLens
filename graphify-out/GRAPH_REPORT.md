@@ -1,11 +1,11 @@
-# Graph Report - CodeLens  (2026-09-05)
+# Graph Report - CodeLens  (2026-09-06)
 
 ## Corpus Check
-- 34 files · ~257,680 words
+- 35 files · ~259,369 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 69 nodes · 42 edges · 6 communities detected
+- 70 nodes · 42 edges · 6 communities detected
 - Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 1 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 

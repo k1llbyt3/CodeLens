@@ -87,7 +87,7 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
   totalWidth: propTotalWidth,
   itemWidth = 68,
   gap = 38,
-  paddingX = 28,
+  paddingX = 52,
   sceneHeight = 280,
   activeIndices,
   pointerIndex = null,
@@ -187,10 +187,33 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
     );
   }, [activeLineCode, hasComparison]);
 
-  const lengthTargetVar = useMemo(() => {
-    const m = activeLineCode.match(/\b(int|var|let|const)?\s*([a-zA-Z_]\w*)\s*=\s*([a-zA-Z_]\w*)\.length\b|\b([a-zA-Z_]\w*)\s*=\s*len\s*\(/);
-    return m ? (m[2] || m[4] || "n") : "n";
-  }, [activeLineCode]);
+  const lengthCalcInfo = useMemo(() => {
+    const code = activeLineCode.trim();
+    const match = code.match(/\b(int|var|let|const)?\s*([a-zA-Z_]\w*)\s*=\s*(.+)$/);
+    if (!match) return null;
+    const varName = match[2];
+    let expr = match[3].replace(/;$/, "").trim();
+    const locals = currentFrame?.locals || {};
+    const evalVal = locals[varName] !== undefined ? locals[varName] : null;
+
+    if (evalVal === null || typeof evalVal !== "number") return null;
+
+    // Substitute array length (e.g. nums.length -> 4, arr.length -> 4) and any local variables
+    // e.g. "nums.length - 1" -> "4 - 1 = 3"
+    let expandedExpr = expr.replace(/\b[a-zA-Z_]\w*\.length\b/g, String(count));
+    Object.keys(locals).forEach((k) => {
+      if (k !== varName && typeof locals[k] === "number") {
+        expandedExpr = expandedExpr.replace(new RegExp(`\\b${k}\\b`, "g"), String(locals[k]));
+      }
+    });
+
+    return {
+      varName,
+      expr,
+      finalVal: evalVal,
+      formula: expandedExpr !== String(evalVal) ? `${expandedExpr} = ${evalVal}` : `${evalVal}`,
+    };
+  }, [activeLineCode, currentFrame?.locals, count]);
 
   const loopInfo = useMemo(() => {
     const locals = currentFrame?.locals || {};
@@ -229,23 +252,39 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
 
   const phase: VisualPhase = useMemo(() => {
     if (
-      activeLineCode.includes("sum =") ||
-      activeLineCode.includes("int sum") ||
-      (activeLineCode.includes("+") && (activeLineCode.includes("[left]") || activeLineCode.includes("[right]")))
+      (activeLineCode.includes("sum =") || activeLineCode.includes("sum=") || activeLineCode.includes("int sum")) &&
+      !activeLineCode.includes("==") &&
+      !activeLineCode.includes("<") &&
+      !activeLineCode.includes(">") &&
+      !activeLineCode.startsWith("if") &&
+      !activeLineCode.includes("if (") &&
+      !activeLineCode.includes("if(")
     ) {
       return "sum_calculation";
     }
     if (
-      (activeLineCode.includes("= temp") || activeLineCode.includes("= tmp") || activeLineCode.includes("= t;")) &&
+      (/\b\w+\[[^\]]+\]\s*=\s*(?:temp|tmp)\b/.test(activeLineCode) ||
+        activeLineCode.includes("= temp") ||
+        activeLineCode.includes("= tmp") ||
+        activeLineCode.includes("= t;")) &&
       !activeLineCode.includes("==")
     ) {
       return "swap_3_assign";
     }
-    if (activeLineCode.includes("arr[") && activeLineCode.includes("] = arr[")) {
+    if (
+      /\b\w+\[[^\]]+\]\s*=\s*\w+\[[^\]]+\]/.test(activeLineCode) ||
+      (activeLineCode.includes("[") && activeLineCode.includes("] = ") && activeLineCode.includes("["))
+    ) {
       return "swap_2_move";
     }
     if (
-      (activeLineCode.includes("temp =") || activeLineCode.includes("tmp =") || activeLineCode.includes("int temp") || activeLineCode.includes("var temp") || activeLineCode.includes("let temp")) &&
+      (/\b(?:int|var|let)?\s*(?:temp|tmp)\s*=\s*\w+\[/.test(activeLineCode) ||
+        ((activeLineCode.includes("temp =") ||
+          activeLineCode.includes("tmp =") ||
+          activeLineCode.includes("int temp") ||
+          activeLineCode.includes("var temp") ||
+          activeLineCode.includes("let temp")) &&
+          activeLineCode.includes("["))) &&
       !activeLineCode.includes("==")
     ) {
       return "swap_1_temp";
@@ -270,13 +309,13 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
 
   const [landedStep, setLandedStep] = useState<number>(-1);
 
-  // Dynamic index extraction from code statements (arr[j], arr[i], arr[j+1], etc.)
+  // Dynamic index extraction from code statements (arr[j], nums[i], a[j+1], etc.)
   const swapIndicesFromCode = useMemo(() => {
     const locals = currentFrame?.locals || {};
     let dst: number | null = null;
     let src: number | null = null;
 
-    const lhsMatch = activeLineCode.match(/arr\[([^\]]+)\]\s*=/);
+    const lhsMatch = activeLineCode.match(/\b\w+\[([^\]]+)\]\s*=/);
     if (lhsMatch) {
       const expr = lhsMatch[1].trim();
       if (!isNaN(Number(expr))) dst = Number(expr);
@@ -286,7 +325,7 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
       else if ((expr === "i + 1" || expr === "i+1") && typeof locals.i === "number") dst = locals.i + 1;
     }
 
-    const rhsMatch = activeLineCode.match(/=\s*arr\[([^\]]+)\]/);
+    const rhsMatch = activeLineCode.match(/=\s*\b\w+\[([^\]]+)\]/);
     if (rhsMatch) {
       const expr = rhsMatch[1].trim();
       if (!isNaN(Number(expr))) src = Number(expr);
@@ -305,6 +344,30 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
   const copySourceIdx = useMemo(() => {
     return swapIndicesFromCode.src ?? iA ?? 0;
   }, [swapIndicesFromCode.src, iA]);
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [sumTargetOffset, setSumTargetOffset] = useState<{ x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    if (phase === "sum_calculation") {
+      let animFrameId: number;
+      const calculateOffset = () => {
+        const sumEl =
+          document.getElementById("memory-cell-value-sum")?.querySelector("span") ||
+          document.getElementById("memory-cell-value-sum");
+        if (sumEl && containerRef.current) {
+          const sumRect = sumEl.getBoundingClientRect();
+          const contRect = containerRef.current.getBoundingClientRect();
+          const targetX = sumRect.left + sumRect.width / 2 - contRect.left;
+          const targetY = sumRect.top + sumRect.height / 2 - contRect.top;
+          setSumTargetOffset({ x: targetX, y: targetY });
+        }
+        animFrameId = requestAnimationFrame(calculateOffset);
+      };
+      calculateOffset();
+      return () => cancelAnimationFrame(animFrameId);
+    }
+  }, [phase, currentStep]);
 
   // Single settlement timer: state only updates ONCE after animation completes (no RAF re-render glitch)
   useEffect(() => {
@@ -344,6 +407,7 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
 
   const isBlurActive = Boolean(
     (isIfStatementLine && hasComparison && phase === "show_result") ||
+    phase === "sum_calculation" ||
     phase === "swap_1_temp" ||
     phase === "swap_2_move" ||
     phase === "swap_3_assign" ||
@@ -755,21 +819,14 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
     return { midX, bA, bB };
   }, [iA, iB, blockData]);
 
-  // Dedicated Visual Physical TEMP Block position (Swaps between left and right side to avoid overlapping pointers or blocks)
+  // Dedicated Visual Physical TEMP Block position (placed in empty canvas directly next to active swap blocks)
   const tempBlockCoords = useMemo(() => {
-    const rightSideThreshold = totalWidth * 0.58;
-    const isRightCrowded =
-      (iB !== null && blockData[iB] && blockData[iB].centerX > rightSideThreshold) ||
-      (pointers && pointers.some((p) => {
-        const blk = blockData[p.index];
-        return blk && blk.centerX > rightSideThreshold;
-      }));
-
-    if (isRightCrowded) {
-      return { x: 70, y: 10 };
-    }
-    return { x: totalWidth - 70, y: 10 };
-  }, [totalWidth, iB, blockData, pointers]);
+    const activeIdx = iA !== null ? iA : (swapIndicesFromCode.src ?? 0);
+    const activeBlock = (blockData && blockData[activeIdx]) || (blockData && blockData[0]);
+    const activeX = activeBlock ? activeBlock.centerX : 100;
+    const targetX = Math.max(75, Math.min(totalWidth - 75, activeX + 60));
+    return { x: targetX, y: 15 };
+  }, [totalWidth, iA, swapIndicesFromCode, blockData]);
 
   // Unified Flight & Trajectory Coordinates for 3-Step Swap Choreography
   const flightCoords = useMemo(() => {
@@ -844,6 +901,7 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
 
   return (
     <div
+      ref={containerRef}
       className={`relative select-none flex flex-col items-center ${className}`}
       style={{ width: `${totalWidth}px`, height: `${sceneHeight}px` }}
     >
@@ -883,102 +941,265 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
           );
         })}
 
-      {/* ═══ SUM VALUE TRANSFER ANIMATION (Converging downward into SUM memory) ═══ */}
-      {phase === "sum_calculation" && iA !== null && iB !== null && blockData[iA] && blockData[iB] && (
-        <>
+      {/* ═══ SUM CALCULATION: NOTHING PREWRITTEN, 2 AND 15 FLY FROM BLOCKS TO EMPTY SPACE, COMPUTE 17, 17 FLIES OUT TO MEMORY, EQUATION VANISHES ═══ */}
+      {phase === "sum_calculation" && iA !== null && iB !== null && blockData[iA] && blockData[iB] && (() => {
+        const startY_A = sceneHeight / 2 - (baselineY + blockData[iA].h * 0.5 - 110);
+        const startY_B = sceneHeight / 2 - (baselineY + blockData[iB].h * 0.5 - 110);
+        const midX = (blockData[iA].centerX + blockData[iB].centerX) / 2;
+        const targetY = 12; // In upper empty space well above pointers and blocks
+
+        const targetX_A = midX - 54;
+        const targetX_B = midX + 8;
+
+        const dX_A = targetX_A - blockData[iA].centerX;
+        const dY_A = targetY - startY_A;
+
+        const dX_B = targetX_B - blockData[iB].centerX;
+        const dY_B = targetY - startY_B;
+
+        const resultVal = currentFrame?.locals?.sum ?? (blockData[iA].val + blockData[iB].val);
+
+        const startResX = midX + 68;
+        // Exact target coordinates measured directly from the sum number slot in the DOM (with top-left alignment calibration)
+        const targetSumX = (sumTargetOffset ? sumTargetOffset.x : (paddingX + 28)) - 8; 
+        const targetSumY = (sumTargetOffset ? sumTargetOffset.y : -52) - 6; 
+        const dX_sum = targetSumX - startResX;
+        const dY_sum = targetSumY - targetY;
+
+        return (
+          <>
+            <style>{`
+              /* Fly A up to equation slot A */
+              @keyframes flyInOperandA_${currentStep} {
+                0% { transform: translate(${-dX_A}px, ${-dY_A}px) scale(0.9); opacity: 0; }
+                100% { transform: translate(0, 0) scale(1.0); opacity: 1; }
+              }
+              /* Fly B up to equation slot B */
+              @keyframes flyInOperandB_${currentStep} {
+                0% { transform: translate(${-dX_B}px, ${-dY_B}px) scale(0.9); opacity: 0; }
+                100% { transform: translate(0, 0) scale(1.0); opacity: 1; }
+              }
+              /* Plus reveals after operands arrive */
+              @keyframes opPlus_${currentStep} {
+                0%, 20% { opacity: 0; transform: scale(0.5); }
+                30%, 75% { opacity: 1; transform: scale(1); }
+                100% { opacity: 0; transform: scale(0.8); }
+              }
+              /* Equal sign reveals after plus */
+              @keyframes opEqual_${currentStep} {
+                0%, 35% { opacity: 0; transform: scale(0.5); }
+                45%, 75% { opacity: 1; transform: scale(1); }
+                100% { opacity: 0; transform: scale(0.8); }
+              }
+              /* Operands fade out when 17 flies out */
+              @keyframes operandFadeOut_${currentStep} {
+                0%, 75% { opacity: 1; }
+                100% { opacity: 0; transform: scale(0.7); }
+              }
+              /* Output 17 appears strictly AFTER equal sign is revealed, then glides to sum cell */
+              @keyframes resultFlyOut_${currentStep} {
+                0%, 48% { opacity: 0; transform: translate(0, 0) scale(0.6); }
+                55% { opacity: 1; transform: translate(0, 0) scale(1.15); }
+                65% { opacity: 1; transform: translate(0, 0) scale(1.0); }
+                95% { opacity: 1; transform: translate(${dX_sum}px, ${dY_sum}px) scale(1.0); filter: drop-shadow(0 0 20px rgba(74, 222, 128, 1)); }
+                100% { opacity: 0; transform: translate(${dX_sum}px, ${dY_sum}px) scale(1.0); }
+              }
+            `}</style>
+
+            {/* ═══ UNIFIED EQUATION ROW WITH 17 EXACTLY IN LINE ═══ */}
+            {/* Operand A (e.g. 2) */}
+            <div
+              style={{
+                position: "absolute",
+                left: `${targetX_A}px`,
+                top: `${targetY}px`,
+                transform: "translate(-50%, -50%)",
+                zIndex: 48,
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: "17px",
+                lineHeight: 1,
+                fontWeight: 900,
+                color: "#38bdf8",
+                textShadow: "0 0 14px rgba(56, 189, 248, 1)",
+                animation: `flyInOperandA_${currentStep} 0.5s cubic-bezier(0.2, 0.9, 0.4, 1) forwards, operandFadeOut_${currentStep} 0.5s ease-in 1.2s forwards`,
+                pointerEvents: "none",
+              }}
+            >
+              {blockData[iA].val}
+            </div>
+
+            {/* Plus (+) */}
+            <div
+              style={{
+                position: "absolute",
+                left: `${midX - 22}px`,
+                top: `${targetY}px`,
+                transform: "translate(-50%, -50%)",
+                zIndex: 48,
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: "17px",
+                lineHeight: 1,
+                fontWeight: 900,
+                color: "#ffffff",
+                textShadow: "0 0 8px rgba(255, 255, 255, 0.9)",
+                animation: `opPlus_${currentStep} 2.2s ease-out forwards`,
+                pointerEvents: "none",
+              }}
+            >
+              +
+            </div>
+
+            {/* Operand B (e.g. 15) */}
+            <div
+              style={{
+                position: "absolute",
+                left: `${targetX_B}px`,
+                top: `${targetY}px`,
+                transform: "translate(-50%, -50%)",
+                zIndex: 48,
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: "17px",
+                lineHeight: 1,
+                fontWeight: 900,
+                color: "#f59e0b",
+                textShadow: "0 0 14px rgba(245, 158, 11, 1)",
+                animation: `flyInOperandB_${currentStep} 0.5s cubic-bezier(0.2, 0.9, 0.4, 1) forwards, operandFadeOut_${currentStep} 0.5s ease-in 1.2s forwards`,
+                pointerEvents: "none",
+              }}
+            >
+              {blockData[iB].val}
+            </div>
+
+            {/* Equal (=) */}
+            <div
+              style={{
+                position: "absolute",
+                left: `${midX + 38}px`,
+                top: `${targetY}px`,
+                transform: "translate(-50%, -50%)",
+                zIndex: 48,
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: "17px",
+                lineHeight: 1,
+                fontWeight: 900,
+                color: "#ffffff",
+                textShadow: "0 0 8px rgba(255, 255, 255, 0.9)",
+                animation: `opEqual_${currentStep} 2.2s ease-out forwards`,
+                pointerEvents: "none",
+              }}
+            >
+              =
+            </div>
+
+            {/* Output result (17) in exact same row right next to =, glides to sum cell */}
+            <div
+              style={{
+                position: "absolute",
+                left: `${startResX}px`,
+                top: `${targetY - 1.5}px`,
+                transform: "translate(-50%, -50%)",
+                transformOrigin: "center center",
+                zIndex: 50,
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: "17px",
+                lineHeight: 1,
+                fontWeight: 900,
+                color: "#4ade80",
+                textShadow: "0 0 16px rgba(74, 222, 128, 1), 0 0 28px rgba(74, 222, 128, 0.8)",
+                animation: `resultFlyOut_${currentStep} 1.6s cubic-bezier(0.25, 1, 0.5, 1) forwards`,
+                pointerEvents: "none",
+              }}
+            >
+              {resultVal}
+            </div>
+          </>
+        );
+      })()}
+
+      {/* ═══ VISUAL BREAK: CIRCUIT CRACK & ESCAPE VECTOR (NO TEXT, NO PILLS) ═══ */}
+      {activeLineCode.trim().startsWith("break") && (
+        <div
+          key="visual-break-effect"
+          style={{
+            position: "absolute",
+            inset: 0,
+            pointerEvents: "none",
+            zIndex: 44,
+          }}
+          className="flex items-center justify-center overflow-hidden"
+        >
           <style>{`
-            @keyframes sumMergeA_${currentStep} {
-              0% {
-                left: ${blockData[iA].centerX}px;
-                top: ${sceneHeight / 2 - (baselineY + blockData[iA].h - 110)}px;
-                opacity: 0;
-                transform: translate(-50%, -50%) scale(0.8);
-              }
-              30% {
-                opacity: 1;
-                transform: translate(-50%, -50%) scale(1.1);
-              }
-              100% {
-                left: ${(blockData[iA].centerX + blockData[iB].centerX) / 2 - 20}px;
-                top: ${sceneHeight - 20}px;
-                opacity: 1;
-                transform: translate(-50%, -50%) scale(1);
-              }
+            @keyframes breakFlash {
+              0% { opacity: 0; transform: scaleX(0.4); }
+              30% { opacity: 1; transform: scaleX(1); }
+              70% { opacity: 0.9; }
+              100% { opacity: 0; transform: scaleX(1.3); }
             }
-            @keyframes sumMergeB_${currentStep} {
-              0% {
-                left: ${blockData[iB].centerX}px;
-                top: ${sceneHeight / 2 - (baselineY + blockData[iB].h - 110)}px;
-                opacity: 0;
-                transform: translate(-50%, -50%) scale(0.8);
-              }
-              30% {
-                opacity: 1;
-                transform: translate(-50%, -50%) scale(1.1);
-              }
-              100% {
-                left: ${(blockData[iA].centerX + blockData[iB].centerX) / 2 + 20}px;
-                top: ${sceneHeight - 20}px;
-                opacity: 1;
-                transform: translate(-50%, -50%) scale(1);
-              }
+            @keyframes breakArrowOut {
+              0% { opacity: 0; transform: translate(-30px, 0) scale(0.6); }
+              40% { opacity: 1; transform: translate(0, 0) scale(1.1); }
+              100% { opacity: 0; transform: translate(60px, -20px) scale(1.3); }
+            }
+            @keyframes breakSpark {
+              0%, 100% { opacity: 0; }
+              50% { opacity: 1; }
             }
           `}</style>
-          {/* Packet A */}
-          <div
-            style={{
-              position: "absolute",
-              animation: `sumMergeA_${currentStep} 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards`,
-              zIndex: 48,
-              fontFamily: "'JetBrains Mono', monospace",
-              fontSize: "13px",
-              fontWeight: 900,
-              color: "#ffffff",
-              textShadow: "0 0 10px #38bdf8",
-              pointerEvents: "none",
-            }}
-          >
-            {blockData[iA].val}
-          </div>
-          {/* Centered '+' operator */}
-          <div
-            style={{
-              position: "absolute",
-              left: `${(blockData[iA].centerX + blockData[iB].centerX) / 2}px`,
-              top: `${sceneHeight - 20}px`,
-              transform: "translate(-50%, -50%)",
-              zIndex: 48,
-              fontFamily: "'JetBrains Mono', monospace",
-              fontSize: "16px",
-              fontWeight: 900,
-              color: "#ffffff",
-              textShadow: "0 0 12px #ffffff",
-              pointerEvents: "none",
-              animation: "pulse 1s infinite",
-            }}
-          >
-            +
-          </div>
-          {/* Packet B */}
-          <div
-            style={{
-              position: "absolute",
-              animation: `sumMergeB_${currentStep} 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards`,
-              zIndex: 48,
-              fontFamily: "'JetBrains Mono', monospace",
-              fontSize: "13px",
-              fontWeight: 900,
-              color: "#ffffff",
-              textShadow: "0 0 10px #f59e0b",
-              pointerEvents: "none",
-            }}
-          >
-            {blockData[iB].val}
-          </div>
-        </>
+          <svg className="w-full h-full" viewBox={`0 0 ${totalWidth} ${sceneHeight}`}>
+            <defs>
+              <linearGradient id="breakGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#ef4444" stopOpacity="0" />
+                <stop offset="30%" stopColor="#f87171" stopOpacity="0.9" />
+                <stop offset="50%" stopColor="#ffffff" stopOpacity="1" />
+                <stop offset="70%" stopColor="#38bdf8" stopOpacity="0.9" />
+                <stop offset="100%" stopColor="#38bdf8" stopOpacity="0" />
+              </linearGradient>
+              <filter id="breakGlow" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="6" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+
+            {/* Glowing fractured circuit line across array representing loop boundary snapping */}
+            <path
+              d={`M 40 ${sceneHeight / 2 - 30} L ${totalWidth / 2 - 25} ${sceneHeight / 2 - 30} L ${totalWidth / 2 - 10} ${sceneHeight / 2 - 45} L ${totalWidth / 2 + 10} ${sceneHeight / 2 - 15} L ${totalWidth / 2 + 30} ${sceneHeight / 2 - 30} L ${totalWidth - 40} ${sceneHeight / 2 - 30}`}
+              fill="none"
+              stroke="url(#breakGrad)"
+              strokeWidth="4"
+              filter="url(#breakGlow)"
+              style={{ animation: `breakFlash 0.9s ease-out forwards` }}
+            />
+
+            {/* Outward kinetic escape arrows representing loop exit */}
+            <g style={{ transformOrigin: "center", animation: `breakArrowOut 0.9s cubic-bezier(0.2, 0.8, 0.4, 1) forwards` }}>
+              <path
+                d={`M ${totalWidth / 2 + 10} ${sceneHeight / 2 - 30} L ${totalWidth / 2 + 50} ${sceneHeight / 2 - 30} M ${totalWidth / 2 + 38} ${sceneHeight / 2 - 42} L ${totalWidth / 2 + 52} ${sceneHeight / 2 - 30} L ${totalWidth / 2 + 38} ${sceneHeight / 2 - 18}`}
+                fill="none"
+                stroke="#38bdf8"
+                strokeWidth="3.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                filter="url(#breakGlow)"
+              />
+              <circle
+                cx={totalWidth / 2}
+                cy={sceneHeight / 2 - 30}
+                r="18"
+                fill="none"
+                stroke="#f87171"
+                strokeWidth="2.5"
+                strokeDasharray="6 4"
+                style={{ animation: `breakSpark 0.5s ease-in-out infinite` }}
+              />
+            </g>
+          </svg>
+        </div>
       )}
 
-      {/* ═══ GLOWING COMPARISON OPERATOR & RESULT BADGE BETWEEN SELECTED BLOCKS ═══ */}
+      {/* ═══ GLOWING COMPARISON OPERATOR & VALUES BROUGHT CLOSE TOGETHER ═══ */}
       {isIfStatementLine && panelCoord && (
         <div
           key="between-blocks-comparison"
@@ -995,19 +1216,18 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
           <style>{`
             @keyframes operatorBlink {
               0%, 100% { opacity: 1; transform: scale(1); }
-              50% { opacity: 0.15; transform: scale(1.2); }
+              50% { opacity: 0.15; transform: scale(1.15); }
             }
           `}</style>
-          {/* Big glowing operator blinking 2-3 times */}
+          
+          {/* Glowing comparison operator in yellow */}
           <div
             style={{
               fontFamily: "'JetBrains Mono', 'SF Mono', Consolas, monospace",
-              fontSize: "26px",
+              fontSize: "28px",
               fontWeight: 900,
-              color: isConditionTrue ? "#4ade80" : "#f87171",
-              filter: isConditionTrue
-                ? "drop-shadow(0 0 10px #4ade80) drop-shadow(0 0 20px rgba(74, 222, 128, 0.8))"
-                : "drop-shadow(0 0 10px #f87171) drop-shadow(0 0 20px rgba(248, 113, 113, 0.8))",
+              color: "#facc15",
+              filter: "drop-shadow(0 0 12px rgba(250, 204, 21, 0.95)) drop-shadow(0 0 24px rgba(234, 179, 8, 0.75))",
               animation: "operatorBlink 0.4s ease-in-out 3",
             }}
           >
@@ -1288,21 +1508,21 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
             );
           })}
 
-          {/* Length completion variable assignment badge */}
+          {/* Length completion variable assignment badge - positioned top right cleanly without pill container */}
           {traversalStep >= count - 1 && (
             <div
               style={{
                 position: "absolute",
-                right: "12px",
-                top: "10px",
+                right: "16px",
+                top: "4px",
                 zIndex: 44,
                 fontFamily: "'JetBrains Mono', 'SF Mono', Consolas, monospace",
               }}
-              className="px-2.5 py-0.5 rounded-md bg-emerald-950/90 border border-emerald-500/70 shadow-[0_0_15px_rgba(16,185,129,0.4)] text-emerald-300 text-xs font-bold flex items-center gap-1.5 animate-in fade-in slide-in-from-right-4 duration-300 pointer-events-none"
+              className="text-xs font-extrabold flex items-center gap-1 animate-in fade-in slide-in-from-right-4 duration-300 pointer-events-none"
             >
-              <span className="text-emerald-400 font-extrabold">{lengthTargetVar}</span>
+              <span className="text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]">{lengthCalcInfo?.varName}</span>
               <span className="text-neutral-400">=</span>
-              <span className="text-white font-extrabold text-sm">{count}</span>
+              <span className="text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]">{lengthCalcInfo?.formula}</span>
             </div>
           )}
         </>
@@ -1614,29 +1834,6 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
               animation: "scanPulse 1.2s ease-in-out infinite alternate",
             }}
           />
-        </div>
-      )}
-
-      {/* ═══ LOOP CHECK STATUS BADGE (✓ In bounds vs ✕ Out of bounds) ═══ */}
-      {loopInfo.isLoopLine && (
-        <div
-          style={{
-            position: "absolute",
-            left: `${totalWidth / 2}px`,
-            bottom: "16px",
-            transform: "translateX(-50%)",
-            zIndex: 32,
-            pointerEvents: "none",
-            fontFamily: "'JetBrains Mono', monospace",
-            fontSize: "12px",
-            fontWeight: 800,
-            color: loopInfo.isInside ? "#4ade80" : "#f87171",
-            textShadow: loopInfo.isInside ? "0 0 8px rgba(74, 222, 128, 0.8)" : "0 0 8px rgba(248, 113, 113, 0.8)",
-            letterSpacing: "0.05em",
-          }}
-          className="animate-in fade-in zoom-in-95 duration-200"
-        >
-          {loopInfo.isInside ? "✓ in bounds" : "✕ out of bounds"}
         </div>
       )}
 

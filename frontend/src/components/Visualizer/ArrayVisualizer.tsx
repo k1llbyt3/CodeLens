@@ -32,7 +32,7 @@ export const ArrayVisualizer: React.FC<ArrayVisualizerProps> = ({
   const [activeOverrideIdx, setActiveOverrideIdx] = useState<number | null>(null);
 
   // Normalize array elements from trace blocks ({ val, status, ... } or raw numbers)
-  const { currentArray, activeIndices, computedMax } = useMemo(() => {
+  const { currentArray, activeIndices, computedMin,computedMax } = useMemo(() => {
     let rawVals: { val: number; state: string }[] = [];
 
     if (blocks && blocks.length > 0) {
@@ -69,6 +69,11 @@ export const ArrayVisualizer: React.FC<ArrayVisualizerProps> = ({
         ? maxVal
         : Math.max(...rawVals.map((item) => item.val), 1);
 
+    const calculatedMin =
+      rawVals.length > 0
+        ? Math.min(...rawVals.map((item) => item.val))
+        : 0;
+
     const activeSet = new Set<number>();
     rawVals.forEach((item, i) => {
       if (item.state !== "default") {
@@ -80,6 +85,7 @@ export const ArrayVisualizer: React.FC<ArrayVisualizerProps> = ({
       currentArray: rawVals,
       activeIndices: activeSet,
       computedMax: calculatedMax,
+      computedMin: calculatedMin,
     };
   }, [blocks, activeOverrideIdx, maxVal, swapIndices]);
 
@@ -139,23 +145,27 @@ export const ArrayVisualizer: React.FC<ArrayVisualizerProps> = ({
             </span>
           )}
           <span className="text-xs font-mono text-neutral-400">
-            Array Visualizer &bull; <span className="text-neutral-200 font-semibold">{count} elements</span> &bull; Max:{" "}
+            <span className="text-neutral-200 font-semibold">{count} elements</span> &bull; Min:{" "}
+            <span className="text-emerald-400 font-semibold">{computedMin}</span> &bull; Max:{" "}
             <span className="text-cyan-400 font-semibold">{computedMax}</span>
           </span>
         </div>
       </div>
 
-      {/* Memory Table - Positioned below header, ABOVE array blocks */}
+      {/* Memory Table - Positioned cleanly BELOW the array header */}
       {memoryVariables && memoryVariables.length > 0 && (
-        <div className="w-full max-w-4xl mb-2 px-2">
-          <MemoryTable variables={memoryVariables} activeLineCode={activeLineCode} />
+        <div className="w-full max-w-4xl px-2 my-2">
+          <MemoryTable
+            variables={memoryVariables}
+            activeLineCode={activeLineCode}
+          />
         </div>
       )}
 
       {/* Main Responsive Horizontal Scroll Wrapper */}
-      <div className="w-full overflow-x-auto pb-4 flex justify-center scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+      <div className="w-full overflow-visible pb-4 flex justify-center">
         <div
-          className="relative flex flex-col items-center"
+          className="relative flex flex-col items-center overflow-visible"
           style={{ width: `${totalWidth}px` }}
         >
           {/* ═══ THREE.JS 3D ARRAY SYSTEM (BLOCKS + BASE) ═══ */}

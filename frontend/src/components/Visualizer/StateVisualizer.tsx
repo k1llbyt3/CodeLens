@@ -6,7 +6,7 @@ import { VariableCard } from "./VariableCard";
 import { MemoryTable } from "./MemoryTable";
 import { ArrayVisualizer } from "./ArrayVisualizer";
 import { CallStackVisualizer } from "./CallStackVisualizer";
-import { Terminal, Layers, Box, Code2 } from "lucide-react";
+import { Terminal, Layers, Box, Code2, Maximize2, Minimize2, CheckCircle2, AlertCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 import { computeGlobalTraceBlocks } from "@/lib/objectPermanence";
@@ -18,6 +18,9 @@ interface StateVisualizerProps {
   currentStep: number;
   trace: TraceStep[];
   code?: string;
+  error?: string | null;
+  isTheaterMode?: boolean;
+  onToggleTheaterMode?: () => void;
 }
 
 export const StateVisualizer: React.FC<StateVisualizerProps> = ({
@@ -26,7 +29,10 @@ export const StateVisualizer: React.FC<StateVisualizerProps> = ({
   totalSteps,
   currentStep,
   trace,
-  code = ""
+  code = "",
+  error = null,
+  isTheaterMode = false,
+  onToggleTheaterMode
 }) => {
   const [activeTab, setActiveTab] = useState<"visualizer" | "terminal" | "callstack">("visualizer");
 
@@ -65,12 +71,29 @@ export const StateVisualizer: React.FC<StateVisualizerProps> = ({
     return computeGlobalTraceBlocks(trace, currentStep, code);
   }, [trace, currentStep, code]);
 
+  const pointerNames = useMemo(() => {
+    const set = new Set<string>(["left", "right", "i", "j", "mid", "low", "high", "p1", "p2", "ptr", "start", "end", "temp"]);
+    Object.values(arrayStates).forEach((arr) => {
+      arr.pointers?.forEach((p: any) => {
+        const name = typeof p === "string" ? p : p?.label || p?.name || p?.var;
+        if (name) set.add(name);
+      });
+    });
+    return set;
+  }, [arrayStates]);
+
   const { persistentPrimitives, activeKeys } = useMemo(() => {
     const prims: Record<string, any> = {};
     const active = new Set<string>();
 
     Object.entries(persistentLocals).forEach(([key, val]) => {
-      if (key === "args") return; // Hardcode ignore "args"
+      if (
+        key === "args" ||
+        key === "temp" ||
+        key.toUpperCase() === "SYSTEM" ||
+        key.toLowerCase().includes("system") ||
+        pointerNames.has(key)
+      ) return; // Ignore args, temp, system notification messages, and array pointers
 
       const isMutated = prevLocals[key] !== undefined && prevLocals[key] !== val;
       const isReferenced = activeIdentifiers.has(key);
@@ -88,7 +111,7 @@ export const StateVisualizer: React.FC<StateVisualizerProps> = ({
       persistentPrimitives: prims,
       activeKeys: active
     };
-  }, [persistentLocals, prevLocals, activeIdentifiers]);
+  }, [persistentLocals, prevLocals, activeIdentifiers, pointerNames]);
 
   const progressiveConsoleLines = useMemo(() => {
     if (!trace || trace.length === 0) return [];
@@ -198,13 +221,56 @@ export const StateVisualizer: React.FC<StateVisualizerProps> = ({
           </button>
         </div>
 
-        <span className="px-3 py-1.5 rounded-lg font-mono text-xs bg-white/[0.03] border border-white/[0.08] text-neutral-400 font-medium">
-          Step {currentFrame ? currentFrame.step : 0} of {totalSteps}
-        </span>
+        <div className="flex items-center gap-2">
+          {currentStep >= totalSteps - 1 && totalSteps > 0 && (
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              title="Execution Completed"
+              className="p-1"
+            >
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.9)]" />
+            </motion.div>
+          )}
+
+          {onToggleTheaterMode && (
+            <button
+              onClick={onToggleTheaterMode}
+              title={isTheaterMode ? "Exit Theater Mode" : "Theater Mode (Expand to full screen)"}
+              className={`p-1.5 rounded-lg border transition-all flex items-center justify-center ${
+                isTheaterMode
+                  ? "bg-cyan-500/20 border-cyan-400 text-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.35)]"
+                  : "bg-white/[0.04] border-white/[0.08] hover:bg-white/[0.08] text-neutral-400 hover:text-white"
+              }`}
+            >
+              {isTheaterMode ? (
+                <Minimize2 className="w-4 h-4" />
+              ) : (
+                <Maximize2 className="w-4 h-4" />
+              )}
+            </button>
+          )}
+        </div>
       </div>
 
       {activeTab === "visualizer" && (
         <div className="flex-1 overflow-y-auto p-3.5 space-y-3">
+          <AnimatePresence>
+            {(error || (currentFrame as any)?.error) && (
+              <motion.div
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                className="p-3.5 rounded-xl bg-rose-950/90 border border-rose-500/50 text-rose-100 font-mono text-xs flex flex-col gap-1.5 shadow-md mb-2"
+              >
+                <div className="flex items-center gap-2 text-rose-400 font-bold">
+                  <AlertCircle className="w-4 h-4" />
+                  <span>Execution Error:</span>
+                </div>
+                <p className="text-rose-200 font-mono whitespace-pre-wrap">{error || (currentFrame as any).error}</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
           <AnimatePresence>
             {stepNewStdout && (
               <motion.div
@@ -275,38 +341,54 @@ export const StateVisualizer: React.FC<StateVisualizerProps> = ({
             )}
           </AnimatePresence>
 
-          {arrayStateList.length === 0 && primitiveEntries.length === 0 && (currentFrame?.line || 0) > 2 ? (
+          {/* Memory Table - Standalone only if no arrays exist */}
+          {primitiveEntries.length > 0 && arrayStateList.length === 0 && (
+            <div className="w-full max-w-4xl mx-auto px-2 mb-2">
+              <MemoryTable
+                variables={primitiveEntries.map(([name, val]) => ({
+                  name,
+                  value: val,
+                  prevValue: prevLocals[name],
+                  isMutated: prevLocals[name] !== undefined && prevLocals[name] !== val,
+                  isActive: activeKeys.has(name),
+                }))}
+                activeLineCode={activeLineCode}
+              />
+            </div>
+          )}
+
+          {/* 3D Array Blocks - Renders if arrays exist */}
+          {arrayStateList.length > 0 ? (
+            <div className="space-y-3">
+              {arrayStateList.map((state) => (
+                <ArrayVisualizer
+                  key={state.name}
+                  name={state.name}
+                  blocks={state.blocks}
+                  pointers={state.pointers}
+                  maxVal={globalMaxVal}
+                  swapIndices={state.swapIndices}
+                  currentStep={currentStep}
+                  isCountingLength={isCountingLength}
+                  currentFrame={currentFrame}
+                  activeLineCode={activeLineCode}
+                  memoryVariables={primitiveEntries.map(([name, val]) => ({
+                    name,
+                    value: val,
+                    prevValue: prevLocals[name],
+                    isMutated: prevLocals[name] !== undefined && prevLocals[name] !== val,
+                    isActive: activeKeys.has(name),
+                  }))}
+                />
+              ))}
+            </div>
+          ) : primitiveEntries.length === 0 && (currentFrame?.line || 0) > 2 ? (
             <div className="h-44 rounded-lg border border-white/[0.06] flex flex-col items-center justify-center p-6 text-center">
               <span className="font-mono text-xs text-neutral-500">
                 No active memory operations on line {currentFrame?.line ?? "--"}
               </span>
             </div>
-          ) : (
-            <div className="space-y-3">
-              {arrayStateList.length > 0 &&
-                arrayStateList.map((state) => (
-                  <ArrayVisualizer
-                    key={state.name}
-                    name={state.name}
-                    blocks={state.blocks}
-                    pointers={state.pointers}
-                    maxVal={globalMaxVal}
-                    swapIndices={state.swapIndices}
-                    currentStep={currentStep}
-                    isCountingLength={isCountingLength}
-                    currentFrame={currentFrame}
-                    activeLineCode={activeLineCode}
-                    memoryVariables={primitiveEntries.map(([name, val]) => ({
-                      name,
-                      value: val,
-                      prevValue: prevLocals[name],
-                      isMutated: prevLocals[name] !== undefined && prevLocals[name] !== val,
-                      isActive: activeKeys.has(name),
-                    }))}
-                  />
-                ))}
-            </div>
-          )}
+          ) : null}
         </div>
       )}
 

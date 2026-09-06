@@ -199,8 +199,16 @@ export default function CodeLensPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleRunTrace, handleTogglePlay, handleStepForward, handleStepBack]);
 
+  const [isTheaterMode, setIsTheaterMode] = useState(false);
+
   const currentFrame = trace[currentStep];
   const previousFrame = currentStep > 0 ? trace[currentStep - 1] : undefined;
+
+  const errorLine = useMemo(() => {
+    if (!error) return undefined;
+    const match = error.match(/line\s*(\d+)/i) || error.match(/:(\d+):/);
+    return match ? parseInt(match[1], 10) : undefined;
+  }, [error]);
 
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden bg-[#0a0a0a] text-neutral-100 select-none">
@@ -211,28 +219,19 @@ export default function CodeLensPage() {
         isLoading={isLoading}
       />
 
-      {error && (
-        <div className="px-5 py-1.5 bg-neutral-900 border-b border-white/[0.06] flex items-center justify-between text-xs font-mono text-neutral-300">
-          <span>{error}</span>
-          <button
-            onClick={() => setError(null)}
-            className="text-neutral-500 hover:text-neutral-300 text-[10px]"
-          >
-            Dismiss
-          </button>
-        </div>
-      )}
-
       <main className="flex-1 flex overflow-hidden">
-        <section className="w-1/2 h-full">
-          <CodeEditor
-            code={code}
-            onChange={(val) => setCode(val || "")}
-            currentLine={currentFrame?.line}
-          />
-        </section>
+        {!isTheaterMode && (
+          <section className="w-1/2 h-full transition-all duration-300">
+            <CodeEditor
+              code={code}
+              onChange={(val) => setCode(val || "")}
+              currentLine={currentFrame?.line}
+              errorLine={errorLine}
+            />
+          </section>
+        )}
 
-        <section className="w-1/2 h-full overflow-hidden">
+        <section className={`${isTheaterMode ? "w-full" : "w-1/2"} h-full overflow-hidden transition-all duration-300`}>
           <StateVisualizer
             currentFrame={currentFrame}
             previousFrame={previousFrame}
@@ -240,6 +239,9 @@ export default function CodeLensPage() {
             currentStep={currentStep}
             trace={trace}
             code={code}
+            error={error}
+            isTheaterMode={isTheaterMode}
+            onToggleTheaterMode={() => setIsTheaterMode((prev) => !prev)}
           />
         </section>
       </main>

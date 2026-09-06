@@ -98,16 +98,21 @@ export function computeGlobalTraceBlocks(
 
       if (!Array.isArray(currArr)) continue;
 
-      // Detect bubble-sort swap in progress (line 12 or 13)
+      // Detect bubble-sort swap in progress
+      const sLineCode = (codeLines[frame.line - 1] || "").trim();
+      const isSwapFrameLine =
+        (sLineCode.includes("temp") || sLineCode.includes("tmp")) &&
+        (sLineCode.includes("[") && sLineCode.includes("]"));
+
       if (
         typeof frame.locals?.j === "number" &&
         frame.locals?.temp !== undefined &&
-        (frame.line === 12 || frame.line === 13)
+        (isSwapFrameLine || frame.line === 12 || frame.line === 13)
       ) {
         const j = frame.locals.j;
         if (j >= 0 && j + 1 < currentBlocks.length) {
-          // Swap physical objects at line 12
-          if (frame.line === 12 && (!prevArr || prevArr[j] !== currArr[j])) {
+          // Swap physical objects if array values mutated
+          if (!prevArr || prevArr[j] !== currArr[j]) {
             const tempObj = currentBlocks[j];
             currentBlocks[j] = currentBlocks[j + 1];
             currentBlocks[j + 1] = tempObj;
@@ -145,8 +150,7 @@ export function computeGlobalTraceBlocks(
     if (
       currentFrame &&
       typeof currentFrame.locals?.j === "number" &&
-      currentFrame.locals?.temp !== undefined &&
-      (currentFrame.line === 11 || currentFrame.line === 12 || currentFrame.line === 13)
+      currentFrame.locals?.temp !== undefined
     ) {
       const j = currentFrame.locals.j;
       if (j >= 0 && j + 1 < currentBlocks.length) {
@@ -173,7 +177,10 @@ export function computeGlobalTraceBlocks(
       !activeLine.includes("<=") &&
       !activeLine.includes(">=");
 
-    const EXCLUDED_PTR_NAMES = new Set(["args"]);
+    const EXCLUDED_PTR_NAMES = new Set(["args", "temp", "tmp", "sum", "target", "val", "count"]);
+    const STANDARD_POINTER_NAMES = new Set([
+      "left", "right", "i", "j", "mid", "low", "high", "p1", "p2", "ptr", "start", "end", "k", "idx", "index"
+    ]);
 
     Object.entries(currLocals).forEach(([k, val]) => {
       if (EXCLUDED_PTR_NAMES.has(k)) return;
@@ -183,6 +190,17 @@ export function computeGlobalTraceBlocks(
         val >= 0 &&
         val < currentBlocks.length
       ) {
+        // Must be a standard indexing pointer OR explicitly used inside array indexing (e.g. arr[n])
+        const isStandard = STANDARD_POINTER_NAMES.has(k);
+        const isUsedAsIndex =
+          activeLine.includes(`[${k}]`) ||
+          activeLine.includes(`[ ${k} ]`) ||
+          (code && (new RegExp(`\\[\\s*${k}\\s*\\]`).test(code) && (activeLine.includes(k) || isStandard)));
+
+        if (!isStandard && !isUsedAsIndex) {
+          return; // Do NOT treat n as a pointer unless arr[n] is actually used
+        }
+
         const isPointerInSwap =
           activeSwapIndices &&
           (val === activeSwapIndices[0] || val === activeSwapIndices[1]);

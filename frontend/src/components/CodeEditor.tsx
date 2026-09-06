@@ -8,6 +8,7 @@ interface CodeEditorProps {
   onChange: (value: string | undefined) => void;
   currentLine?: number;
   currentColumn?: number;
+  errorLine?: number;
   readOnly?: boolean;
 }
 
@@ -16,6 +17,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   onChange,
   currentLine,
   currentColumn,
+  errorLine,
   readOnly = false
 }) => {
   const editorRef = useRef<any>(null);
@@ -138,7 +140,29 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
     if (!editorRef.current) return;
     const editor = editorRef.current;
 
-    if (currentLine && currentLine > 0) {
+    if (errorLine && errorLine > 0) {
+      const newDecorations = [
+        {
+          range: {
+            startLineNumber: errorLine,
+            startColumn: 1,
+            endLineNumber: errorLine,
+            endColumn: 1
+          },
+          options: {
+            isWholeLine: true,
+            className: "codelens-error-line-highlight",
+            glyphMarginClassName: "codelens-error-glyph"
+          }
+        }
+      ];
+
+      decorationsRef.current = editor.deltaDecorations(
+        decorationsRef.current,
+        newDecorations
+      );
+      editor.revealLineInCenterIfOutsideViewport(errorLine);
+    } else if (currentLine && currentLine > 0) {
       const lineContent = editor.getModel()?.getLineContent(currentLine) || "";
       const isReturn = /\b(return|break)\b/.test(lineContent);
       const isCondition = /\b(if|else|for|while|switch)\b/.test(lineContent);
@@ -179,7 +203,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
     } else {
       decorationsRef.current = editor.deltaDecorations(decorationsRef.current, []);
     }
-  }, [currentLine, currentColumn]);
+  }, [currentLine, currentColumn, errorLine]);
 
   return (
     <div className="h-full flex flex-col overflow-hidden bg-[#0a0a0a] border-r border-white/[0.06]">
