@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from "react";
 import { TraceStep } from "@/types/tracer";
 import { VariableCard } from "./VariableCard";
+import { MemoryTable } from "./MemoryTable";
 import { ArrayVisualizer } from "./ArrayVisualizer";
 import { CallStackVisualizer } from "./CallStackVisualizer";
 import { Terminal, Layers, Box, Code2 } from "lucide-react";
@@ -281,7 +282,7 @@ export const StateVisualizer: React.FC<StateVisualizerProps> = ({
               </span>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {arrayStateList.length > 0 &&
                 arrayStateList.map((state) => (
                   <ArrayVisualizer
@@ -295,23 +296,15 @@ export const StateVisualizer: React.FC<StateVisualizerProps> = ({
                     isCountingLength={isCountingLength}
                     currentFrame={currentFrame}
                     activeLineCode={activeLineCode}
+                    memoryVariables={primitiveEntries.map(([name, val]) => ({
+                      name,
+                      value: val,
+                      prevValue: prevLocals[name],
+                      isMutated: prevLocals[name] !== undefined && prevLocals[name] !== val,
+                      isActive: activeKeys.has(name),
+                    }))}
                   />
                 ))}
-
-              {primitiveEntries.length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {primitiveEntries.map(([name, val]) => (
-                    <VariableCard
-                      key={name}
-                      name={name}
-                      value={val}
-                      prevValue={prevLocals[name]}
-                      isMutated={prevLocals[name] !== undefined && prevLocals[name] !== val}
-                      isActiveLine={activeKeys.has(name)}
-                    />
-                  ))}
-                </div>
-              )}
             </div>
           )}
         </div>

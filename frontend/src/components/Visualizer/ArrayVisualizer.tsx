@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useMemo } from "react";
-import { ArrayBase } from "./GlassMonolith";
-import { ArrayBlock, ThreeArrayBlocks } from "./ArrayBlock";
+import { MemoryTable } from "./MemoryTable";
+import { ThreeArrayBlocks } from "./ArrayBlock";
 
 export interface ArrayVisualizerProps {
   name?: string;
@@ -13,6 +13,7 @@ export interface ArrayVisualizerProps {
   currentFrame?: any;
   activeLineCode?: string;
   currentStep?: number;
+  memoryVariables?: any[];
   [key: string]: any;
 }
 
@@ -26,6 +27,7 @@ export const ArrayVisualizer: React.FC<ArrayVisualizerProps> = ({
   currentFrame,
   activeLineCode = "",
   currentStep = 0,
+  memoryVariables = [],
 }) => {
   const [activeOverrideIdx, setActiveOverrideIdx] = useState<number | null>(null);
 
@@ -68,9 +70,9 @@ export const ArrayVisualizer: React.FC<ArrayVisualizerProps> = ({
         : Math.max(...rawVals.map((item) => item.val), 1);
 
     const activeSet = new Set<number>();
-    rawVals.forEach((item, idx) => {
-      if (item.state === "active" || item.state === "green" || item.state === "amber") {
-        activeSet.add(idx);
+    rawVals.forEach((item, i) => {
+      if (item.state !== "default") {
+        activeSet.add(i);
       }
     });
 
@@ -88,12 +90,12 @@ export const ArrayVisualizer: React.FC<ArrayVisualizerProps> = ({
   }
 
   // Shared geometry constants strictly locked to Three.js base & block layout
-  const itemWidth = 84;
-  const gap = 36;
-  const paddingX = 36;
+  const itemWidth = 68;
+  const gap = 38;
+  const paddingX = 28;
   const contentWidth = count * itemWidth + Math.max(0, count - 1) * gap;
-  const totalWidth = Math.max(300, 2 * paddingX + contentWidth);
-  const sceneHeight = 310;
+  const totalWidth = Math.max(280, 2 * paddingX + contentWidth);
+  const sceneHeight = 280;
 
   // Normalize pointers list for any number of dynamic pointers
   const normalizedPointers = useMemo(() => {
@@ -129,7 +131,7 @@ export const ArrayVisualizer: React.FC<ArrayVisualizerProps> = ({
   return (
     <div className="flex flex-col items-center justify-center w-full select-none">
       {/* Visualizer Header */}
-      <div className="w-full max-w-4xl mb-4 flex flex-wrap items-center justify-between gap-3 px-2">
+      <div className="w-full max-w-4xl mb-2 flex flex-wrap items-center justify-between gap-3 px-2">
         <div className="flex items-center gap-2">
           {name && (
             <span className="text-xs font-mono font-semibold px-2 py-1 rounded bg-white/[0.06] text-neutral-300 border border-white/[0.08]">
@@ -142,6 +144,13 @@ export const ArrayVisualizer: React.FC<ArrayVisualizerProps> = ({
           </span>
         </div>
       </div>
+
+      {/* Memory Table - Positioned below header, ABOVE array blocks */}
+      {memoryVariables && memoryVariables.length > 0 && (
+        <div className="w-full max-w-4xl mb-2 px-2">
+          <MemoryTable variables={memoryVariables} activeLineCode={activeLineCode} />
+        </div>
+      )}
 
       {/* Main Responsive Horizontal Scroll Wrapper */}
       <div className="w-full overflow-x-auto pb-4 flex justify-center scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">

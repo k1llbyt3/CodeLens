@@ -39,36 +39,6 @@ export const VariableCard: React.FC<VariableCardProps> = ({
     }
   }, [name, value]);
 
-  useEffect(() => {
-    if (prevValue !== undefined && prevValue !== value && isMutated) {
-      if (typeof value === "number" && typeof prevValue === "number") {
-        const diff = value - prevValue;
-        if (diff > 0) {
-          setMathDelta({
-            text: `+${diff}`,
-            color: "text-emerald-300 bg-emerald-950/90 border-emerald-500/50 shadow-[0_0_12px_rgba(16,185,129,0.4)]",
-            id: Date.now()
-          });
-        } else if (diff < 0) {
-          setMathDelta({
-            text: `${diff}`,
-            color: "text-rose-300 bg-rose-950/90 border-rose-500/50 shadow-[0_0_12px_rgba(244,63,94,0.4)]",
-            id: Date.now()
-          });
-        }
-      } else {
-        setMathDelta({
-          text: "mutated",
-          color: "text-sky-300 bg-sky-950/90 border-sky-500/50 shadow-[0_0_12px_rgba(56,189,248,0.4)]",
-          id: Date.now()
-        });
-      }
-
-      const timer = setTimeout(() => setMathDelta(null), 800);
-      return () => clearTimeout(timer);
-    }
-  }, [value, prevValue, isMutated]);
-
   const getType = (val: any): string => {
     if (typeof val === "number") return Number.isInteger(val) ? "int" : "double";
     if (typeof val === "boolean") return "boolean";
@@ -133,21 +103,7 @@ export const VariableCard: React.FC<VariableCardProps> = ({
       transition={{ duration: 0.3 }}
       className={`relative flex items-center justify-between p-4 rounded-xl border bg-black/40 backdrop-blur-xl transition-all duration-300 ${themeStyle.border}`}
     >
-      <AnimatePresence>
-        {mathDelta && (
-          <motion.span
-            key={mathDelta.id}
-            initial={{ opacity: 0, y: 0 }}
-            animate={{ opacity: [0, 1, 0], y: -30 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-            className={`absolute right-4 -top-3 px-2 py-0.5 rounded-md font-mono text-[11px] font-bold border pointer-events-none z-30 ${mathDelta.color}`}
-          >
-            {mathDelta.text}
-          </motion.span>
-        )}
-      </AnimatePresence>
-
-      <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
           <span className="font-mono text-xs font-semibold text-neutral-100">
             {name}

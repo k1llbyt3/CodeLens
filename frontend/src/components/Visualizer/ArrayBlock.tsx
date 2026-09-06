@@ -85,10 +85,10 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
   currentArray,
   computedMax,
   totalWidth: propTotalWidth,
-  itemWidth = 84,
-  gap = 36,
-  paddingX = 36,
-  sceneHeight = 310,
+  itemWidth = 68,
+  gap = 38,
+  paddingX = 28,
+  sceneHeight = 280,
   activeIndices,
   pointerIndex = null,
   pointerLabel = "j",
@@ -105,16 +105,16 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
   const hasMountedRef = useRef(false);
 
   const count = Math.max(1, currentArray.length);
-  const contentWidth = count * itemWidth + (count - 1) * gap;
+  const contentWidth = count * itemWidth + Math.max(0, count - 1) * gap;
   const totalWidth = propTotalWidth || (2 * paddingX + contentWidth);
 
-  const blockWidth = 62;
-  const blockDepth = 52;
-  const minHeight = 52;
-  const maxHeight = 146;
+  const blockWidth = 50;
+  const blockDepth = 42;
+  const minHeight = 44;
+  const maxHeight = 118;
 
-  const baseDeckHeight = 44;
-  const collarHeight = 8;
+  const baseDeckHeight = 36;
+  const collarHeight = 7;
   const baselineY = baseDeckHeight + 2;
   const blockRotY = -0.10;
 
@@ -178,12 +178,14 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
 
   const isIfStatementLine = useMemo(() => {
     const code = activeLineCode.trim();
+    const isArrComp = code.includes("arr[") || code.includes("nums[") || code.includes("[left]") || code.includes("[right]") || (hasComparison && !code.includes("sum"));
     return (
       (code.startsWith("if") || code.includes("if (") || code.includes("if(")) &&
       !code.includes("temp") &&
-      !code.includes("for")
+      !code.includes("for") &&
+      isArrComp
     );
-  }, [activeLineCode]);
+  }, [activeLineCode, hasComparison]);
 
   const lengthTargetVar = useMemo(() => {
     const m = activeLineCode.match(/\b(int|var|let|const)?\s*([a-zA-Z_]\w*)\s*=\s*([a-zA-Z_]\w*)\.length\b|\b([a-zA-Z_]\w*)\s*=\s*len\s*\(/);
@@ -198,6 +200,7 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
     const jVal = hasJ ? (locals.j as number) : 0;
     const isLoopLine = /\b(for|while)\b/.test(activeLineCode);
     const endBound = hasI ? Math.max(0, count - 1 - iVal) : count - 1;
+    const isInside = hasJ ? jVal < endBound : hasI ? iVal < count : true;
     return {
       hasLoop: hasI || hasJ || isLoopLine,
       isLoopLine,
@@ -207,6 +210,7 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
       endBound,
       hasI,
       hasJ,
+      isInside,
     };
   }, [currentFrame?.locals, activeLineCode, count]);
 
@@ -217,13 +221,20 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
     | "blur_bg"
     | "reveal_condition"
     | "show_result"
+    | "sum_calculation"
     | "swap_1_temp"
     | "swap_2_move"
     | "swap_3_assign"
     | "restoring";
 
-  // Derive visual phase synchronously to eliminate any asynchronous render glitch
   const phase: VisualPhase = useMemo(() => {
+    if (
+      activeLineCode.includes("sum =") ||
+      activeLineCode.includes("int sum") ||
+      (activeLineCode.includes("+") && (activeLineCode.includes("[left]") || activeLineCode.includes("[right]")))
+    ) {
+      return "sum_calculation";
+    }
     if (
       (activeLineCode.includes("= temp") || activeLineCode.includes("= tmp") || activeLineCode.includes("= t;")) &&
       !activeLineCode.includes("==")
@@ -305,25 +316,7 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
     }
   }, [phase, currentStep]);
 
-  // Track pointer movements for floating +1 advance indicator
-  const prevPointersRef = useRef<Record<string, number>>({});
-  const [pointerDeltas, setPointerDeltas] = useState<Record<string, { delta: number; key: number }>>({});
 
-  useEffect(() => {
-    if (!pointers || pointers.length === 0) return;
-    const newDeltas: Record<string, { delta: number; key: number }> = {};
-    pointers.forEach((p) => {
-      const prev = prevPointersRef.current[p.label];
-      if (prev !== undefined && p.index !== prev) {
-        const diff = p.index - prev;
-        newDeltas[p.label] = { delta: diff, key: Date.now() + Math.random() };
-      }
-      prevPointersRef.current[p.label] = p.index;
-    });
-    if (Object.keys(newDeltas).length > 0) {
-      setPointerDeltas((prev) => ({ ...prev, ...newDeltas }));
-    }
-  }, [pointers, currentStep]);
 
   // ═══ 3. LEFT-TO-RIGHT ONE-BY-ONE TRAVERSAL ANIMATION (1.. 2.. 3..) ═══
   const [traversalStep, setTraversalStep] = useState<number>(-1);
@@ -350,9 +343,11 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
   }, [isCountingLength, count, currentStep]);
 
   const isBlurActive = Boolean(
-    isIfStatementLine &&
-    hasComparison &&
-    phase === "show_result"
+    (isIfStatementLine && hasComparison && phase === "show_result") ||
+    phase === "swap_1_temp" ||
+    phase === "swap_2_move" ||
+    phase === "swap_3_assign" ||
+    (swapIndices && swapIndices.length === 2 && swapIndices[0] !== swapIndices[1])
   );
 
   const isResultActive = Boolean(
@@ -401,6 +396,24 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
           isFocused: true,
         };
       }
+    }
+
+    if (phase === "sum_calculation" && (index === iA || index === iB)) {
+      return {
+        name: "cyan",
+        outerGlass: 0xe0f2fe,
+        attenuationColor: 0x38bdf8,
+        topGlass: 0xf0f9ff,
+        innerColor: 0x0284c7,
+        glowColor: 0x38bdf8,
+        emissive: 0x0284c7,
+        emissiveIntensity: 0.85,
+        opacity: 0.96,
+        pointLightColor: 0x38bdf8,
+        labelColor: "#38bdf8",
+        textShadow: "0 0 14px rgba(56, 189, 248, 1), 0 0 28px rgba(14, 165, 233, 0.8)",
+        isFocused: true,
+      };
     }
 
     if (phase === "swap_1_temp" || phase === "swap_2_move" || phase === "swap_3_assign") {
@@ -591,8 +604,8 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
     rootGroup.add(deckLine);
 
     // Socket Collars, Monoliths & Indices
-    const socketWidth = 76;
-    const socketDepth = 66;
+    const socketWidth = 62;
+    const socketDepth = 54;
 
     const blockGroups: Array<{
       group: THREE.Group;
@@ -844,7 +857,13 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
       {/* ═══ DEPTH-OF-FIELD OPTICAL BLUR ON NON-SELECTED BLOCKS ═══ */}
       {isBlurActive &&
         blockData.map((b) => {
-          const isFocused = b.index === iA || b.index === iB;
+          const isFocused =
+            b.index === iA ||
+            b.index === iB ||
+            (swapIndices && (b.index === swapIndices[0] || b.index === swapIndices[1])) ||
+            b.index === swapIndicesFromCode.dst ||
+            b.index === swapIndicesFromCode.src ||
+            b.index === copySourceIdx;
           if (isFocused) return null;
           return (
             <div
@@ -863,6 +882,101 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
             />
           );
         })}
+
+      {/* ═══ SUM VALUE TRANSFER ANIMATION (Converging downward into SUM memory) ═══ */}
+      {phase === "sum_calculation" && iA !== null && iB !== null && blockData[iA] && blockData[iB] && (
+        <>
+          <style>{`
+            @keyframes sumMergeA_${currentStep} {
+              0% {
+                left: ${blockData[iA].centerX}px;
+                top: ${sceneHeight / 2 - (baselineY + blockData[iA].h - 110)}px;
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.8);
+              }
+              30% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1.1);
+              }
+              100% {
+                left: ${(blockData[iA].centerX + blockData[iB].centerX) / 2 - 20}px;
+                top: ${sceneHeight - 20}px;
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+              }
+            }
+            @keyframes sumMergeB_${currentStep} {
+              0% {
+                left: ${blockData[iB].centerX}px;
+                top: ${sceneHeight / 2 - (baselineY + blockData[iB].h - 110)}px;
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.8);
+              }
+              30% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1.1);
+              }
+              100% {
+                left: ${(blockData[iA].centerX + blockData[iB].centerX) / 2 + 20}px;
+                top: ${sceneHeight - 20}px;
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+              }
+            }
+          `}</style>
+          {/* Packet A */}
+          <div
+            style={{
+              position: "absolute",
+              animation: `sumMergeA_${currentStep} 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards`,
+              zIndex: 48,
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: "13px",
+              fontWeight: 900,
+              color: "#ffffff",
+              textShadow: "0 0 10px #38bdf8",
+              pointerEvents: "none",
+            }}
+          >
+            {blockData[iA].val}
+          </div>
+          {/* Centered '+' operator */}
+          <div
+            style={{
+              position: "absolute",
+              left: `${(blockData[iA].centerX + blockData[iB].centerX) / 2}px`,
+              top: `${sceneHeight - 20}px`,
+              transform: "translate(-50%, -50%)",
+              zIndex: 48,
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: "16px",
+              fontWeight: 900,
+              color: "#ffffff",
+              textShadow: "0 0 12px #ffffff",
+              pointerEvents: "none",
+              animation: "pulse 1s infinite",
+            }}
+          >
+            +
+          </div>
+          {/* Packet B */}
+          <div
+            style={{
+              position: "absolute",
+              animation: `sumMergeB_${currentStep} 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards`,
+              zIndex: 48,
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: "13px",
+              fontWeight: 900,
+              color: "#ffffff",
+              textShadow: "0 0 10px #f59e0b",
+              pointerEvents: "none",
+            }}
+          >
+            {blockData[iB].val}
+          </div>
+        </>
+      )}
 
       {/* ═══ GLOWING COMPARISON OPERATOR & RESULT BADGE BETWEEN SELECTED BLOCKS ═══ */}
       {isIfStatementLine && panelCoord && (
@@ -900,13 +1014,18 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
             {conditionOperator}
           </div>
 
-          {/* TRUE / FALSE badge */}
+          {/* Clean TRUE / FALSE label without background pill */}
           <span
-            className={`px-2 py-0.5 rounded text-[11px] font-mono font-black border shadow-lg tracking-wider ${
-              isConditionTrue
-                ? "bg-emerald-500/30 text-emerald-300 border-emerald-500/80 shadow-[0_0_12px_rgba(34,197,94,0.6)]"
-                : "bg-rose-500/30 text-rose-300 border-rose-500/80 shadow-[0_0_12px_rgba(244,63,94,0.6)]"
-            }`}
+            style={{
+              fontFamily: "'JetBrains Mono', 'SF Mono', Consolas, monospace",
+              fontSize: "13px",
+              fontWeight: 900,
+              color: isConditionTrue ? "#4ade80" : "#f87171",
+              textShadow: isConditionTrue
+                ? "0 0 12px rgba(74, 222, 128, 0.95), 0 0 20px rgba(74, 222, 128, 0.6)"
+                : "0 0 12px rgba(248, 113, 113, 0.95), 0 0 20px rgba(248, 113, 113, 0.6)",
+              letterSpacing: "0.1em",
+            }}
           >
             {isConditionTrue ? "TRUE" : "FALSE"}
           </span>
@@ -1133,12 +1252,13 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
         </>
       )}
 
-      {/* ═══ STRICT 1-BY-1 LEFT-TO-RIGHT ARRAY LENGTH SCAN TRAVERSAL (1.. 2.. 3.. 4..) - NO PILLS ═══ */}
+      {/* ═══ STRICT 1-BY-1 LEFT-TO-RIGHT ARRAY LENGTH SCAN TRAVERSAL (1.. 2.. 3.. 4..) DIRECTLY ABOVE BLOCKS ═══ */}
       {isCountingLength && traversalStep >= 0 && (
         <>
           {blockData.map((b, idx) => {
             if (idx > traversalStep) return null;
-            const topPx = sceneHeight / 2 - (baselineY + b.h - 110) - 34;
+            const blockTopPx = sceneHeight / 2 - (baselineY + b.h - 110);
+            const topPx = blockTopPx - 10;
             const isCurrent = idx === traversalStep;
             return (
               <div
@@ -1147,15 +1267,15 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
                   position: "absolute",
                   left: `${b.centerX}px`,
                   top: `${topPx}px`,
-                  transform: "translateX(-50%)",
+                  transform: "translate(-50%, -100%)",
                   zIndex: 42,
                   fontFamily: "'JetBrains Mono', 'SF Mono', Consolas, monospace",
-                  fontSize: isCurrent ? "22px" : "18px",
+                  fontSize: isCurrent ? "16px" : "14px",
                   fontWeight: 900,
                   color: isCurrent ? "#00ff7a" : "#38bdf8",
                   textShadow: isCurrent
-                    ? "0 0 14px rgba(0, 255, 122, 1), 0 0 28px rgba(0, 255, 122, 0.75)"
-                    : "0 0 10px rgba(56, 189, 248, 0.9)",
+                    ? "0 0 12px rgba(0, 255, 122, 1), 0 0 20px rgba(0, 255, 122, 0.75)"
+                    : "0 0 8px rgba(56, 189, 248, 0.9)",
                   pointerEvents: "none",
                   userSelect: "none",
                   letterSpacing: "0.05em",
@@ -1173,12 +1293,12 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
             <div
               style={{
                 position: "absolute",
-                right: "20px",
-                top: "12px",
+                right: "12px",
+                top: "10px",
                 zIndex: 44,
                 fontFamily: "'JetBrains Mono', 'SF Mono', Consolas, monospace",
               }}
-              className="px-3 py-1 rounded-md bg-emerald-950/80 border border-emerald-500/70 shadow-[0_0_15px_rgba(16,185,129,0.4)] text-emerald-300 text-xs font-bold flex items-center gap-1.5 animate-in fade-in slide-in-from-right-4 duration-300 pointer-events-none"
+              className="px-2.5 py-0.5 rounded-md bg-emerald-950/90 border border-emerald-500/70 shadow-[0_0_15px_rgba(16,185,129,0.4)] text-emerald-300 text-xs font-bold flex items-center gap-1.5 animate-in fade-in slide-in-from-right-4 duration-300 pointer-events-none"
             >
               <span className="text-emerald-400 font-extrabold">{lengthTargetVar}</span>
               <span className="text-neutral-400">=</span>
@@ -1188,103 +1308,209 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
         </>
       )}
 
-      {/* ═══ NEON POINTER TRACKER WITH SMOOTH GLIDE & +1 ADVANCE BADGE ═══ */}
-      <style>{`
-        @keyframes floatUpFade {
-          0% {
-            opacity: 1;
-            transform: translateY(0px) scale(0.9);
-          }
-          100% {
-            opacity: 0;
-            transform: translateY(-22px) scale(1.2);
-          }
-        }
-      `}</style>
-      {pointers && pointers.map((p) => {
-        const activeBlock = blockData[p.index];
-        if (!activeBlock) return null;
+      {/* ═══ NEON POINTER TRACKER WITH SMOOTH GLIDE & ELEVATED POSITIONING ═══ */}
+      {(() => {
+        if (!pointers || pointers.length === 0) return null;
+        const groupsByIndex: Record<number, typeof pointers> = {};
+        pointers.forEach((p) => {
+          if (!groupsByIndex[p.index]) groupsByIndex[p.index] = [];
+          groupsByIndex[p.index].push(p);
+        });
 
-        // Offset if multiple pointers on the same index
-        const sharingPointers = pointers.filter((other) => other.index === p.index);
-        const sharingIdx = sharingPointers.findIndex((other) => other.label === p.label);
-        const offsetX = sharingPointers.length > 1 ? (sharingIdx - (sharingPointers.length - 1) / 2) * 28 : 0;
+        return Object.entries(groupsByIndex).map(([idxStr, group]) => {
+          const index = Number(idxStr);
+          const activeBlock = blockData[index];
+          if (!activeBlock) return null;
 
-        const blockTopPx = sceneHeight / 2 - (baselineY + activeBlock.h - 110);
-        const pointerTopPx = blockTopPx - 16;
-        const isPointerFocused = !isBlurActive || p.index === iA || p.index === iB;
+          const blockTopPx = sceneHeight / 2 - (baselineY + activeBlock.h - 110);
+          const isPointerFocused = !isBlurActive || group.some((p) => p.index === iA || p.index === iB);
 
-        const color = p.label === "i" ? "#38bdf8" : p.label === "j" ? "#00ff7a" : "#c084fc";
-        const deltaInfo = pointerDeltas[p.label];
+          // Check if group can fit on the same line
+          const combinedLength = group.map((p) => p.label).join(", ").length;
+          const isSameLine = combinedLength <= 14;
 
-        return (
-          <div
-            key={`pointer-tracker-${p.label}`}
-            style={{
-              position: "absolute",
-              left: `${activeBlock.centerX + offsetX}px`,
-              top: `${pointerTopPx}px`,
-              transform: "translate(-50%, -100%)",
-              zIndex: 30,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              pointerEvents: "none",
-              filter: isPointerFocused ? "none" : "blur(3px) opacity(0.35)",
-              transition: "left 0.5s cubic-bezier(0.25, 1, 0.5, 1), top 0.5s cubic-bezier(0.25, 1, 0.5, 1), filter 0.4s ease",
-            }}
-          >
-            {/* Floating +1 / +N movement badge */}
-            {deltaInfo && (
+          if (isSameLine) {
+            const pointerTopPx = blockTopPx - 34;
+            const primaryColor =
+              group[0].label === "i"
+                ? "#38bdf8"
+                : group[0].label === "j"
+                ? "#00ff7a"
+                : group[0].label === "left"
+                ? "#38bdf8"
+                : group[0].label === "right"
+                ? "#f59e0b"
+                : "#c084fc";
+
+            return (
               <div
-                key={`delta-badge-${p.label}-${deltaInfo.key}`}
+                key={`pointer-group-${index}`}
                 style={{
                   position: "absolute",
-                  top: "-22px",
-                  fontFamily: "'JetBrains Mono', 'SF Mono', Consolas, monospace",
-                  fontSize: "13px",
-                  fontWeight: 900,
-                  color: deltaInfo.delta > 0 ? "#4ade80" : "#f87171",
-                  textShadow: deltaInfo.delta > 0 ? "0 0 10px rgba(74, 222, 128, 0.95)" : "0 0 10px rgba(248, 113, 113, 0.95)",
-                  animation: "floatUpFade 1s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+                  left: `${activeBlock.centerX}px`,
+                  top: `${pointerTopPx}px`,
+                  transform: "translate(-50%, -100%)",
+                  zIndex: 30,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  pointerEvents: "none",
+                  filter: isPointerFocused ? "none" : "blur(3px) opacity(0.35)",
+                  transition: "left 0.4s cubic-bezier(0.25, 1, 0.5, 1), top 0.4s cubic-bezier(0.25, 1, 0.5, 1), filter 0.3s ease",
                 }}
               >
-                {deltaInfo.delta > 0 ? `+${deltaInfo.delta}` : `${deltaInfo.delta}`}
+                <div style={{ display: "flex", alignItems: "center", gap: "2px" }}>
+                  {group.map((p, pIdx) => {
+                    const color =
+                      p.label === "i"
+                        ? "#38bdf8"
+                        : p.label === "j"
+                        ? "#00ff7a"
+                        : p.label === "left"
+                        ? "#38bdf8"
+                        : p.label === "right"
+                        ? "#f59e0b"
+                        : "#c084fc";
+                    return (
+                      <React.Fragment key={`pointer-lbl-${p.label}-${index}`}>
+                        <span
+                          style={{
+                            fontFamily: "'JetBrains Mono', 'SF Mono', Consolas, monospace",
+                            fontSize: "15px",
+                            fontWeight: 800,
+                            color,
+                            textShadow: `0 0 8px ${color}, 0 0 18px ${color}80`,
+                            letterSpacing: "0.05em",
+                            lineHeight: 1,
+                          }}
+                        >
+                          {p.label}
+                        </span>
+                        {pIdx < group.length - 1 && (
+                          <span
+                            style={{
+                              fontFamily: "'JetBrains Mono', 'SF Mono', Consolas, monospace",
+                              fontSize: "15px",
+                              fontWeight: 700,
+                              color: "#94a3b8",
+                              lineHeight: 1,
+                              marginRight: "3px",
+                            }}
+                          >
+                            ,
+                          </span>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </div>
+                {/* Multiple arrows side by side corresponding to each pointer */}
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "2px" }}>
+                  {group.map((p, pIdx) => {
+                    const color =
+                      p.label === "i"
+                        ? "#38bdf8"
+                        : p.label === "j"
+                        ? "#00ff7a"
+                        : p.label === "left"
+                        ? "#38bdf8"
+                        : p.label === "right"
+                        ? "#f59e0b"
+                        : "#c084fc";
+                    return (
+                      <svg
+                        key={`ptr-arr-${p.label}-${pIdx}`}
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke={color}
+                        strokeWidth="3.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        style={{
+                          filter: `drop-shadow(0 0 6px ${color}) drop-shadow(0 0 12px ${color}90)`,
+                        }}
+                      >
+                        <path d="M12 4v15M19 12l-7 7-7-7" />
+                      </svg>
+                    );
+                  })}
+                </div>
               </div>
-            )}
+            );
+          } else {
+            // Stacked in separate lines: each line has its pointer and arrow
+            return (
+              <React.Fragment key={`pointer-group-multiline-${index}`}>
+                {group.map((p, pIdx) => {
+                  const offsetY = pIdx * 24;
+                  const pointerTopPx = blockTopPx - 34 - offsetY;
+                  const color =
+                    p.label === "i"
+                      ? "#38bdf8"
+                      : p.label === "j"
+                      ? "#00ff7a"
+                      : p.label === "left"
+                      ? "#38bdf8"
+                      : p.label === "right"
+                      ? "#f59e0b"
+                      : "#c084fc";
 
-            <span
-              style={{
-                fontFamily: "'JetBrains Mono', 'SF Mono', Consolas, monospace",
-                fontSize: "17px",
-                fontWeight: 800,
-                color,
-                textShadow: `0 0 8px ${color}, 0 0 18px ${color}80`,
-                letterSpacing: "0.05em",
-                lineHeight: 1,
-              }}
-            >
-              {p.label}
-            </span>
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke={color}
-              strokeWidth="3.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              style={{
-                filter: `drop-shadow(0 0 6px ${color}) drop-shadow(0 0 12px ${color}90)`,
-                marginTop: "2px",
-              }}
-            >
-              <path d="M12 4v15M19 12l-7 7-7-7" />
-            </svg>
-          </div>
-        );
-      })}
+                  return (
+                    <div
+                      key={`pointer-tracker-${p.label}-${index}`}
+                      style={{
+                        position: "absolute",
+                        left: `${activeBlock.centerX}px`,
+                        top: `${pointerTopPx}px`,
+                        transform: "translate(-50%, -100%)",
+                        zIndex: 30 + pIdx,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        pointerEvents: "none",
+                        filter: isPointerFocused ? "none" : "blur(3px) opacity(0.35)",
+                        transition: "left 0.4s cubic-bezier(0.25, 1, 0.5, 1), top 0.4s cubic-bezier(0.25, 1, 0.5, 1), filter 0.3s ease",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontFamily: "'JetBrains Mono', 'SF Mono', Consolas, monospace",
+                          fontSize: "15px",
+                          fontWeight: 800,
+                          color,
+                          textShadow: `0 0 8px ${color}, 0 0 18px ${color}80`,
+                          letterSpacing: "0.05em",
+                          lineHeight: 1,
+                        }}
+                      >
+                        {p.label}
+                      </span>
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke={color}
+                        strokeWidth="3.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        style={{
+                          filter: `drop-shadow(0 0 6px ${color}) drop-shadow(0 0 12px ${color}90)`,
+                          marginTop: "2px",
+                        }}
+                      >
+                        <path d="M12 4v15M19 12l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  );
+                })}
+              </React.Fragment>
+            );
+          }
+        });
+      })()}
 
       {/* ═══ NUMERIC VALUES INSIDE UPPER FROSTED GLASS ═══ */}
       {blockData.map((b) => {
@@ -1341,12 +1567,12 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
               position: "absolute",
               left: `${b.centerX}px`,
               top: `${topPx}px`,
-              width: "66px",
-              height: `${b.h + 8}px`,
+              width: "56px",
+              height: `${b.h}px`,
               transform: "translate(-50%, 0)",
-              borderRadius: "8px",
-              border: `2px solid ${glowColor}`,
-              boxShadow: `0 0 25px ${glowColor}, inset 0 0 15px ${glowColor}`,
+              borderRadius: "6px",
+              border: `1.5px solid ${glowColor}`,
+              boxShadow: `0 0 16px ${glowColor}, inset 0 0 8px ${glowColor}`,
               pointerEvents: "none",
               zIndex: 22,
               animation: "pulse 1.8s ease-in-out infinite",
@@ -1355,30 +1581,121 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
         );
       })}
 
+      {/* ═══ ACTIVE LOOP BOUNDARY SCANNER RAIL (VISUAL LOOP CHECK CUE) ═══ */}
+      {loopInfo.isLoopLine && blockData[0] && blockData[loopInfo.endBound] && (
+        <div
+          style={{
+            position: "absolute",
+            left: `${blockData[0].centerX - 28}px`,
+            width: `${blockData[loopInfo.endBound].centerX - blockData[0].centerX + 56}px`,
+            bottom: "8px",
+            height: "5px",
+            borderRadius: "9999px",
+            background: loopInfo.isInside
+              ? "linear-gradient(90deg, rgba(56, 189, 248, 0.15) 0%, rgba(56, 189, 248, 0.65) 50%, rgba(56, 189, 248, 0.15) 100%)"
+              : "linear-gradient(90deg, rgba(239, 68, 68, 0.2) 0%, rgba(239, 68, 68, 0.8) 50%, rgba(239, 68, 68, 0.2) 100%)",
+            border: loopInfo.isInside ? "1.2px solid rgba(56, 189, 248, 0.85)" : "1.2px solid rgba(239, 68, 68, 0.85)",
+            boxShadow: loopInfo.isInside
+              ? "0 0 16px rgba(56, 189, 248, 0.85), inset 0 0 8px rgba(56, 189, 248, 0.5)"
+              : "0 0 16px rgba(239, 68, 68, 0.85), inset 0 0 8px rgba(239, 68, 68, 0.5)",
+            pointerEvents: "none",
+            zIndex: 26,
+            overflow: "hidden",
+          }}
+        >
+          {/* Traveling scanner pulse pip */}
+          <div
+            style={{
+              width: "36px",
+              height: "100%",
+              borderRadius: "9999px",
+              background: loopInfo.isInside ? "#38bdf8" : "#ef4444",
+              boxShadow: loopInfo.isInside ? "0 0 14px #38bdf8" : "0 0 14px #ef4444",
+              animation: "scanPulse 1.2s ease-in-out infinite alternate",
+            }}
+          />
+        </div>
+      )}
 
+      {/* ═══ LOOP CHECK STATUS BADGE (✓ In bounds vs ✕ Out of bounds) ═══ */}
+      {loopInfo.isLoopLine && (
+        <div
+          style={{
+            position: "absolute",
+            left: `${totalWidth / 2}px`,
+            bottom: "16px",
+            transform: "translateX(-50%)",
+            zIndex: 32,
+            pointerEvents: "none",
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: "12px",
+            fontWeight: 800,
+            color: loopInfo.isInside ? "#4ade80" : "#f87171",
+            textShadow: loopInfo.isInside ? "0 0 8px rgba(74, 222, 128, 0.8)" : "0 0 8px rgba(248, 113, 113, 0.8)",
+            letterSpacing: "0.05em",
+          }}
+          className="animate-in fade-in zoom-in-95 duration-200"
+        >
+          {loopInfo.isInside ? "✓ in bounds" : "✕ out of bounds"}
+        </div>
+      )}
 
-      {/* ═══ ARRAY INDEX LABELS ON BASE COLORED AS PER THE BLOCK COLOR ═══ */}
+      {/* ═══ SORTED PASS / LOOP END AURORA CASCADE SHIMMER WAVE (VISUAL TREAT - NO LETTERS) ═══ */}
+      {(activeLineCode.includes("Sorting completed") || (currentFrame?.locals?.i !== undefined && currentFrame.locals.i >= count - 1)) && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            pointerEvents: "none",
+            zIndex: 24,
+            overflow: "hidden",
+          }}
+        >
+          {blockData.map((b, idx) => {
+            const topPx = sceneHeight / 2 - (baselineY + b.h - 110);
+            return (
+              <div
+                key={`aurora-wave-${b.index}`}
+                style={{
+                  position: "absolute",
+                  left: `${b.centerX}px`,
+                  top: `${topPx}px`,
+                  width: "64px",
+                  height: `${b.h}px`,
+                  transform: "translateX(-50%)",
+                  borderRadius: "6px",
+                  background: "linear-gradient(180deg, rgba(52, 211, 153, 0.35) 0%, rgba(56, 189, 248, 0.2) 100%)",
+                  boxShadow: "0 0 22px rgba(52, 211, 153, 0.85), inset 0 0 12px rgba(56, 189, 248, 0.6)",
+                  animation: `auroraPulse 1.8s ease-in-out infinite ${idx * 0.14}s`,
+                }}
+              />
+            );
+          })}
+        </div>
+      )}
+
+      {/* ═══ ARRAY INDEX LABELS ON BASE IN CRISP WHITE GLOW ═══ */}
       {blockData.map((b) => {
-        const isFocused = !isBlurActive || b.index === iA || b.index === iB;
+        const isFocused = !isBlurActive || b.index === iA || b.index === iB || (swapIndices && (b.index === swapIndices[0] || b.index === swapIndices[1]));
         return (
           <div
             key={`base-index-label-${b.index}`}
             style={{
               position: "absolute",
               left: `${b.centerX}px`,
-              bottom: "42px",
+              bottom: "33px",
               transform: "translateX(-50%)",
               zIndex: 28,
               fontFamily: "'JetBrains Mono', 'SF Mono', Consolas, monospace",
-              fontSize: "15px",
+              fontSize: "14px",
               fontWeight: 800,
-              color: b.theme.labelColor,
-              textShadow: `0 0 10px ${b.theme.labelColor}, 0 0 20px ${b.theme.labelColor}90`,
+              color: "#ffffff",
+              textShadow: "0 0 10px rgba(255, 255, 255, 0.95), 0 0 20px rgba(255, 255, 255, 0.6)",
               pointerEvents: "none",
               userSelect: "none",
               letterSpacing: "0.04em",
-              filter: isFocused ? "none" : "blur(3px) opacity(0.35)",
-              transition: "all 0.4s ease",
+              filter: isFocused ? "none" : "blur(3px) opacity(0.25)",
+              transition: "all 0.3s ease",
             }}
           >
             [{b.index}]
