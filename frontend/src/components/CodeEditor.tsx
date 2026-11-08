@@ -2,6 +2,7 @@
 
 import React, { useRef, useEffect, useState } from "react";
 import Editor, { OnMount, BeforeMount } from "@monaco-editor/react";
+import { Maximize2, Minimize2 } from "lucide-react";
 
 interface CodeEditorProps {
   code: string;
@@ -10,6 +11,10 @@ interface CodeEditorProps {
   currentColumn?: number;
   errorLine?: number;
   readOnly?: boolean;
+  isExpanded?: boolean;
+  onToggleExpand?: () => void;
+  splitRatio?: number;
+  onSetSplitRatio?: (ratio: number) => void;
 }
 
 export const CodeEditor: React.FC<CodeEditorProps> = ({
@@ -18,7 +23,11 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   currentLine,
   currentColumn,
   errorLine,
-  readOnly = false
+  readOnly = false,
+  isExpanded = false,
+  onToggleExpand,
+  splitRatio = 50,
+  onSetSplitRatio,
 }) => {
   const editorRef = useRef<any>(null);
   const decorationsRef = useRef<string[]>([]);
@@ -26,6 +35,12 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
     line: 1,
     col: 1
   });
+
+  const fileName = React.useMemo(() => {
+    if (!code) return "Source.java";
+    const classMatch = code.match(/\b(?:public\s+)?class\s+([a-zA-Z_]\w*)/);
+    return classMatch ? `${classMatch[1]}.java` : "Source.java";
+  }, [code]);
 
   const handleBeforeMount: BeforeMount = (monaco) => {
     // Register custom Monarch tokenizer for Java so methods, datatypes, variables, and keywords have distinct colors
@@ -210,22 +225,39 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
       <div className="flex items-center justify-between px-4 py-2.5 bg-[#0a0a0a] border-b border-white/[0.06]">
         <div className="flex items-center gap-2">
           <span className="font-mono text-xs font-medium text-neutral-300">
-            Source.java
+            {fileName}
           </span>
           <span className="px-1.5 py-0.2 text-[9px] font-mono text-neutral-500 bg-white/[0.03] border border-white/[0.06] rounded-sm">
             Java 17 JDI
           </span>
         </div>
 
-        <div className="flex items-center gap-4 font-mono text-[11px]">
+        <div className="flex items-center gap-3 font-mono text-[11px]">
           {currentLine && currentLine > 0 && (
             <span className="text-sky-400 font-semibold px-2 py-0.5 rounded bg-sky-500/10 border border-sky-500/20">
-              Execution Pointer: Line {currentLine}
+              Line {currentLine}
             </span>
           )}
-          <span className="text-neutral-500 font-normal">
-            Cursor: Ln {cursorPos.line}, Col {cursorPos.col}
+          <span className="text-neutral-500 font-normal hidden md:inline">
+            Ln {cursorPos.line}, Col {cursorPos.col}
           </span>
+          {onToggleExpand && (
+            <button
+              onClick={onToggleExpand}
+              className={`p-1.5 rounded-md border transition-all flex items-center justify-center ${
+                isExpanded
+                  ? "bg-cyan-500/20 border-cyan-400 text-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.35)]"
+                  : "bg-white/[0.04] border-white/[0.08] hover:bg-white/[0.08] text-neutral-400 hover:text-white"
+              }`}
+              title={isExpanded ? "Collapse Code Editor" : "Expand Code Editor to Full Width"}
+            >
+              {isExpanded ? (
+                <Minimize2 className="w-4 h-4" />
+              ) : (
+                <Maximize2 className="w-4 h-4" />
+              )}
+            </button>
+          )}
         </div>
       </div>
 

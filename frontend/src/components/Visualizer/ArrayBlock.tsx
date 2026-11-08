@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 import { ArrayBlockState, ArrayBlockItem, ThreeArraySceneProps, LoopInfo } from "./ArrayBlock/types";
 import { LoopConditionOverlay } from "./ArrayBlock/LoopConditionOverlay";
+import { PointerParticleBurst } from "./ArrayBlock/PointerParticleBurst";
 import { MemoryTable } from "./MemoryTable";
 export type { ArrayBlockState, ArrayBlockItem, ThreeArraySceneProps, LoopInfo };
 
@@ -77,12 +78,29 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
   activeLineCode = "",
   currentStep = 0,
   memoryVariables,
+  stepEvent,
+  loopAnalysis,
   onBlockClick,
   className = "",
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const hasMountedRef = useRef(false);
+  const lastKnownPointerPositionsRef = useRef<Record<string, { x: number; y: number; color: string }>>({});
+  const prevPointersRef = useRef<Set<string>>(new Set());
+
+  // Track pointers to detect newly appeared ones
+  const newPointersThisStep = useMemo(() => {
+    const currentLabels = new Set(pointers.map((p) => p.label));
+    const newlyAppeared = new Set<string>();
+    currentLabels.forEach((label) => {
+      if (!prevPointersRef.current.has(label)) {
+        newlyAppeared.add(label);
+      }
+    });
+    prevPointersRef.current = currentLabels;
+    return newlyAppeared;
+  }, [pointers, currentStep]);
 
   const count = Math.max(1, currentArray.length);
   const contentWidth = count * itemWidth + Math.max(0, count - 1) * gap;
@@ -699,7 +717,7 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
   const getColorTheme = (index: number, state?: string) => {
     const isCompared = isIfStatementLine && hasComparison && (index === iA || index === iB);
 
-    if (isCompared && isResultActive) {
+    if (isCompared && isResultActive && !stepEvent?.isLoopTermination && !activeLineCode.trim().startsWith("break")) {
       const isLeft = index === iA;
       const receiveGreen = isConditionTrue ? isLeft : !isLeft;
       if (receiveGreen) {
@@ -1434,91 +1452,7 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
 
       {/* ═══ CONTROL FLOW: continue / break / loop-end — block-level focus pulse only ═══ */}
       {(() => {
-        const isBreak    = activeLineCode.trim().startsWith("break");
-        const isContinue = activeLineCode.trim().startsWith("continue");
-        const isLoopEnd  = loopInfo.isLoopLine && !loopInfo.isPass;
-
-        if (!isBreak && !isContinue && !isLoopEnd) return null;
-
-        // The active loop-variable block is the visual anchor for all three states.
-        const anchorIdx = Math.max(0, Math.min(count - 1, loopInfo.varVal ?? 0));
-        const anchor = blockData[anchorIdx];
-        if (!anchor) return null;
-
-        const blockTopPx = sceneHeight / 2 - (baselineY + anchor.h - 110);
-        const cx = anchor.centerX;
-
-        // Color semantics:
-        //   continue  → cyan  (loop keeps going, same palette as iteration)
-        //   break     → red   (interruption)
-        //   loop-end  → green (condition FALSE — the last result shown by LoopConditionOverlay is green/red already)
-        const ringColor  = isBreak ? "#f87171" : isContinue ? "#38bdf8" : "#4ade80";
-        const glowRGBA   = isBreak
-          ? "rgba(248,113,113,0.55)"
-          : isContinue
-          ? "rgba(56,189,248,0.55)"
-          : "rgba(74,222,128,0.55)";
-
-        const animKey = currentStep;
-
-        return (
-          <React.Fragment key={`cf-focus-${animKey}`}>
-            <style>{`
-              /* Expanding ring that fades out — marks the control-flow event on the active block */
-              @keyframes cfRingExpand_${animKey} {
-                0%   { transform: translate(-50%, 0) scale(0.85); opacity: 0.9; }
-                60%  { transform: translate(-50%, 0) scale(1.35); opacity: 0.55; }
-                100% { transform: translate(-50%, 0) scale(1.7);  opacity: 0; }
-              }
-              /* Second, delayed ring for depth */
-              @keyframes cfRingExpand2_${animKey} {
-                0%   { transform: translate(-50%, 0) scale(0.95); opacity: 0; }
-                20%  { opacity: 0.6; }
-                80%  { transform: translate(-50%, 0) scale(1.55); opacity: 0.3; }
-                100% { transform: translate(-50%, 0) scale(1.9);  opacity: 0; }
-              }
-              /* For break: brief red tint that clears — just the border, no fill */
-              @keyframes cfBreakBorder_${animKey} {
-                0%   { opacity: 0; }
-                15%  { opacity: 1; }
-                70%  { opacity: 0.7; }
-                100% { opacity: 0; }
-              }
-            `}</style>
-
-            {/* Primary expanding ring on the anchor block */}
-            <div
-              style={{
-                position: "absolute",
-                left: `${cx}px`,
-                top: `${blockTopPx}px`,
-                width: `${anchor.h > 80 ? 62 : 58}px`,
-                height: `${anchor.h}px`,
-                borderRadius: "7px",
-                border: `2px solid ${ringColor}`,
-                boxShadow: `0 0 14px ${glowRGBA}, inset 0 0 8px ${glowRGBA}`,
-                pointerEvents: "none",
-                zIndex: 46,
-                animation: `cfRingExpand_${animKey} 1.1s cubic-bezier(0.2, 0.8, 0.4, 1) forwards`,
-              }}
-            />
-            {/* Second ring — offset timing for depth */}
-            <div
-              style={{
-                position: "absolute",
-                left: `${cx}px`,
-                top: `${blockTopPx}px`,
-                width: `${anchor.h > 80 ? 62 : 58}px`,
-                height: `${anchor.h}px`,
-                borderRadius: "7px",
-                border: `1.5px solid ${ringColor}`,
-                pointerEvents: "none",
-                zIndex: 45,
-                animation: `cfRingExpand2_${animKey} 1.4s cubic-bezier(0.2, 0.8, 0.4, 1) 0.15s forwards`,
-              }}
-            />
-          </React.Fragment>
-        );
+        return null;
       })()}
 
       {/* ═══ GLOWING COMPARISON OPERATOR & VALUES BROUGHT CLOSE TOGETHER ═══ */}
@@ -2057,13 +1991,32 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
         });
         if (visiblePointers.length === 0) return null;
 
+        // Check if synthetic j+1 pointer should be shown for Bubble Sort comparisons
+        // Only show if currently comparing or accessing elements, not on loop header lines
+        const isJLoop =
+          typeof currentFrame?.locals?.j === "number" &&
+          hasComparison &&
+          !loopInfo.isLoopLine &&
+          iB !== null &&
+          iB < count;
+        const hasExplicitJPlusOne = visiblePointers.some((p) => p.label === "j+1");
+        const prevHadJPlusOne = prevPointersRef.current.has("j+1");
+
+        // Detached vanishing burst for j+1 when comparison step finishes
+        const jPlusOneJustVanished = prevHadJPlusOne && !isJLoop;
+        const jPlusOneLastPos = lastKnownPointerPositionsRef.current["j+1"];
+
+        if (isJLoop && !hasExplicitJPlusOne && iB !== null) {
+          visiblePointers.push({ index: iB, label: "j+1" });
+        }
+
         const groupsByIndex: Record<number, typeof pointers> = {};
         visiblePointers.forEach((p) => {
           if (!groupsByIndex[p.index]) groupsByIndex[p.index] = [];
           groupsByIndex[p.index].push(p);
         });
 
-        return Object.entries(groupsByIndex).map(([idxStr, group]) => {
+        const renderedGroups = Object.entries(groupsByIndex).map(([idxStr, group]) => {
           const rawIndex = Number(idxStr);
           const isOutOfBounds = rawIndex < 0 || rawIndex >= count;
           const activeBlock = !isOutOfBounds ? blockData[rawIndex] : null;
@@ -2107,113 +2060,183 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
 
           if (isSameLine) {
             const pointerTopPx = blockTopPx - 34;
-            const primaryColor =
-              group[0].label === "i"
-                ? "#38bdf8"
-                : group[0].label === "j"
-                ? "#00ff7a"
-                : group[0].label === "left"
-                ? "#38bdf8"
-                : group[0].label === "right"
-                ? "#f59e0b"
-                : "#c084fc";
+
+            // Check if any pointers in this group are terminating or continue targets
+            const terminatingPointers = group.filter((p) =>
+              stepEvent?.isLoopTermination &&
+              (stepEvent?.terminatedVars?.includes(p.label) || (stepEvent?.isBreak && loopInfo.hasLoop))
+            );
+            const activePointersInGroup = group.filter((p) => !terminatingPointers.includes(p));
 
             return (
-              <div
-                key={`pointer-track-${primaryLabel}`}
-                style={{
-                  position: "absolute",
-                  left: `${pointerX}px`,
-                  top: `${pointerTopPx}px`,
-                  transform: "translate(-50%, -100%)",
-                  zIndex: isLoopPointer ? 36 : 30,
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  pointerEvents: "none",
-                  filter: isPointerFocused ? "none" : "blur(3px) opacity(0.35)",
-                  transition: `left 0.6s cubic-bezier(0.25, 1, 0.5, 1) 0s, top 0.6s cubic-bezier(0.25, 1, 0.5, 1) 0s, filter 0.3s ease`,
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: "2px" }}>
-                  {group.map((p, pIdx) => {
-                    const color =
-                      p.label === "i"
-                        ? "#38bdf8"
-                        : p.label === "j"
-                        ? "#00ff7a"
-                        : p.label === "left"
-                        ? "#38bdf8"
-                        : p.label === "right"
-                        ? "#f59e0b"
-                        : "#c084fc";
+              <React.Fragment key={`pointer-track-frag-${primaryLabel}`}>
+                {/* Render particle burst for terminating pointers */}
+                {terminatingPointers.map((p) => {
+                  const color =
+                    p.label === "i"
+                      ? "#38bdf8"
+                      : p.label === "j"
+                      ? "#00ff7a"
+                      : p.label === "left"
+                      ? "#38bdf8"
+                      : p.label === "right"
+                      ? "#f59e0b"
+                      : "#c084fc";
+                  const delayMs = stepEvent?.isBreak ? 400 : 3200;
+                  return (
+                    <PointerParticleBurst
+                      key={`burst-sameline-${p.label}-${currentStep}`}
+                      x={pointerX}
+                      y={pointerTopPx}
+                      color={color}
+                      label={p.label}
+                      delayMs={delayMs}
+                    />
+                  );
+                })}
+
+                {/* Render remaining active pointers */}
+                {activePointersInGroup.length > 0 && (
+                  (() => {
+                    const newlyAppearedPtr = activePointersInGroup.find((p) => newPointersThisStep.has(p.label));
+                    const appearAnimation = newlyAppearedPtr
+                      ? newlyAppearedPtr.label === "i"
+                        ? "pointerEntrance_i 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) forwards"
+                        : newlyAppearedPtr.label === "j"
+                        ? "pointerEntrance_j 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) forwards"
+                        : newlyAppearedPtr.label === "left"
+                        ? "pointerEntrance_left 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) forwards"
+                        : newlyAppearedPtr.label === "right"
+                        ? "pointerEntrance_right 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) forwards"
+                        : "pointerEntrance_default 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) forwards"
+                      : undefined;
+
                     return (
-                      <React.Fragment key={`pointer-lbl-stable-${p.label}`}>
-                        <span
-                          style={{
-                            fontFamily: "'JetBrains Mono', 'SF Mono', Consolas, monospace",
-                            fontSize: "15px",
-                            fontWeight: 800,
-                            color,
-                            textShadow: `0 0 8px ${color}, 0 0 18px ${color}80`,
-                            letterSpacing: "0.05em",
-                            lineHeight: 1,
-                          }}
-                        >
-                          {p.label}
-                        </span>
-                        {pIdx < group.length - 1 && (
-                          <span
-                            style={{
-                              fontFamily: "'JetBrains Mono', 'SF Mono', Consolas, monospace",
-                              fontSize: "15px",
-                              fontWeight: 700,
-                              color: "#94a3b8",
-                              lineHeight: 1,
-                              marginRight: "3px",
-                            }}
-                          >
-                            ,
-                          </span>
-                        )}
-                      </React.Fragment>
-                    );
-                  })}
-                </div>
-                {/* Multiple arrows side by side corresponding to each pointer */}
-                <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "2px" }}>
-                  {group.map((p, pIdx) => {
-                    const color =
-                      p.label === "i"
-                        ? "#38bdf8"
-                        : p.label === "j"
-                        ? "#00ff7a"
-                        : p.label === "left"
-                        ? "#38bdf8"
-                        : p.label === "right"
-                        ? "#f59e0b"
-                        : "#c084fc";
-                    return (
-                      <svg
-                        key={`ptr-arr-${p.label}-${pIdx}`}
-                        width="18"
-                        height="18"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke={color}
-                        strokeWidth="3.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
+                      <div
+                        key={`pointer-track-${primaryLabel}`}
                         style={{
-                          filter: `drop-shadow(0 0 6px ${color}) drop-shadow(0 0 12px ${color}90)`,
+                          position: "absolute",
+                          left: `${pointerX}px`,
+                          top: `${pointerTopPx}px`,
+                          transform: "translate(-50%, -100%)",
+                          zIndex: isLoopPointer ? 36 : 30,
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          pointerEvents: "none",
+                          filter: isPointerFocused ? "none" : "blur(3px) opacity(0.35)",
+                          transition: `left 0.6s cubic-bezier(0.25, 1, 0.5, 1) 0s, top 0.6s cubic-bezier(0.25, 1, 0.5, 1) 0s, filter 0.3s ease`,
+                          animation: appearAnimation,
                         }}
                       >
-                        <path d="M12 4v15M19 12l-7 7-7-7" />
-                      </svg>
-                    );
-                  })}
-                </div>
-              </div>
+                    {/* Continue statement indicator */}
+                    {activePointersInGroup.some((p) =>
+                      stepEvent?.isContinue && (stepEvent?.continueTargetVar === p.label || p.label === loopInfo.varName)
+                    ) && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: "-30px",
+                          whiteSpace: "nowrap",
+                          padding: "2px 8px",
+                          borderRadius: "9999px",
+                          backgroundColor: "rgba(8, 51, 68, 0.95)",
+                          border: "1px solid #06b6d4",
+                          color: "#67e8f9",
+                          fontWeight: 800,
+                          fontSize: "9px",
+                          fontFamily: "'JetBrains Mono', monospace",
+                          boxShadow: "0 0 16px rgba(6, 182, 212, 0.9), inset 0 0 8px rgba(6, 182, 212, 0.4)",
+                          animation: "pulse 1.2s infinite ease-in-out",
+                          zIndex: 50,
+                        }}
+                      >
+                        CONTINUE ↷ Next Iteration
+                      </div>
+                    )}
+
+                    <div style={{ display: "flex", alignItems: "center", gap: "2px" }}>
+                      {activePointersInGroup.map((p, pIdx) => {
+                        const color =
+                          p.label === "i"
+                            ? "#38bdf8"
+                            : p.label === "j"
+                            ? "#00ff7a"
+                            : p.label === "left"
+                            ? "#38bdf8"
+                            : p.label === "right"
+                            ? "#f59e0b"
+                            : "#c084fc";
+                        lastKnownPointerPositionsRef.current[p.label] = { x: pointerX, y: pointerTopPx, color };
+                        const isContinue = stepEvent?.isContinue && (stepEvent?.continueTargetVar === p.label || p.label === loopInfo.varName);
+
+                        return (
+                          <React.Fragment key={`pointer-lbl-stable-${p.label}`}>
+                            <span
+                              style={{
+                                fontFamily: "'JetBrains Mono', 'SF Mono', Consolas, monospace",
+                                fontSize: "15px",
+                                fontWeight: 800,
+                                color,
+                                textShadow: "none",
+                                letterSpacing: "0.05em",
+                                lineHeight: 1,
+                              }}
+                            >
+                              {p.label}
+                            </span>
+                            {pIdx < activePointersInGroup.length - 1 && (
+                              <span
+                                style={{
+                                  fontFamily: "'JetBrains Mono', 'SF Mono', Consolas, monospace",
+                                  fontSize: "15px",
+                                  fontWeight: 700,
+                                  color: "#94a3b8",
+                                  lineHeight: 1,
+                                  marginRight: "3px",
+                                }}
+                              >
+                                ,
+                              </span>
+                            )}
+                          </React.Fragment>
+                        );
+                      })}
+                    </div>
+                    {/* Multiple arrows side by side corresponding to each pointer */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "2px" }}>
+                      {activePointersInGroup.map((p, pIdx) => {
+                        const color =
+                          p.label === "i"
+                            ? "#38bdf8"
+                            : p.label === "j"
+                            ? "#00ff7a"
+                            : p.label === "left"
+                            ? "#38bdf8"
+                            : p.label === "right"
+                            ? "#f59e0b"
+                            : "#c084fc";
+                        return (
+                          <svg
+                            key={`ptr-arr-${p.label}-${pIdx}`}
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke={color}
+                            strokeWidth="3.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M12 4v15M19 12l-7 7-7-7" />
+                          </svg>
+                        );
+                      })}
+                      </div>
+                    </div>
+                  );
+                })())}
+              </React.Fragment>
             );
           } else {
             // Stacked in separate lines: each line has its pointer and arrow
@@ -2233,6 +2256,27 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
                       ? "#f59e0b"
                       : "#c084fc";
 
+                  lastKnownPointerPositionsRef.current[p.label] = { x: pointerX, y: pointerTopPx, color };
+
+                  const isTerminating = Boolean(
+                    stepEvent?.isLoopTermination &&
+                    (stepEvent?.terminatedVars?.includes(p.label) || (stepEvent?.isBreak && loopInfo.hasLoop))
+                  );
+
+                  if (isTerminating) {
+                    const delayMs = stepEvent?.isBreak ? 400 : 3200;
+                    return (
+                      <PointerParticleBurst
+                        key={`burst-multiline-${p.label}-${currentStep}`}
+                        x={pointerX}
+                        y={pointerTopPx}
+                        color={color}
+                        label={p.label}
+                        delayMs={delayMs}
+                      />
+                    );
+                  }
+
                   const isLoopPointer =
                     loopInfo.isLoopLine &&
                     (p.label === loopInfo.varName ||
@@ -2245,6 +2289,21 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
                     !isBlurActive ||
                     isLoopPointer ||
                     (!loopInfo.isLoopLine && (p.index === iA || p.index === iB));
+
+                  const isContinue = stepEvent?.isContinue && (stepEvent?.continueTargetVar === p.label || p.label === loopInfo.varName);
+                  const isNewlyAppeared = newPointersThisStep.has(p.label);
+
+                  const singleAppearAnimation = isNewlyAppeared
+                    ? p.label === "i"
+                      ? "pointerEntrance_i 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) forwards"
+                      : p.label === "j"
+                      ? "pointerEntrance_j 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) forwards"
+                      : p.label === "left"
+                      ? "pointerEntrance_left 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) forwards"
+                      : p.label === "right"
+                      ? "pointerEntrance_right 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) forwards"
+                      : "pointerEntrance_default 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) forwards"
+                    : undefined;
 
                   return (
                     <div
@@ -2261,15 +2320,38 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
                         pointerEvents: "none",
                         filter: isSinglePointerFocused ? "none" : "blur(3px) opacity(0.35)",
                         transition: `left 0.35s cubic-bezier(0.25, 1, 0.5, 1) ${pointerTransitionDelay}, top 0.35s cubic-bezier(0.25, 1, 0.5, 1) ${pointerTransitionDelay}, filter 0.3s ease`,
+                        animation: singleAppearAnimation,
                       }}
                     >
+                      {isContinue && (
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: "-28px",
+                            whiteSpace: "nowrap",
+                            padding: "2px 8px",
+                            borderRadius: "9999px",
+                            backgroundColor: "rgba(8, 51, 68, 0.95)",
+                            border: "1px solid #06b6d4",
+                            color: "#67e8f9",
+                            fontWeight: 800,
+                            fontSize: "9px",
+                            fontFamily: "'JetBrains Mono', monospace",
+                            boxShadow: "0 0 16px rgba(6, 182, 212, 0.9), inset 0 0 8px rgba(6, 182, 212, 0.4)",
+                            animation: "pulse 1.2s infinite ease-in-out",
+                            zIndex: 50,
+                          }}
+                        >
+                          CONTINUE ↷ Next Iteration
+                        </div>
+                      )}
                       <span
                         style={{
                           fontFamily: "'JetBrains Mono', 'SF Mono', Consolas, monospace",
                           fontSize: "15px",
                           fontWeight: 800,
                           color,
-                          textShadow: `0 0 8px ${color}, 0 0 18px ${color}80`,
+                          textShadow: "none",
                           letterSpacing: "0.05em",
                           lineHeight: 1,
                         }}
@@ -2285,10 +2367,7 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
                         strokeWidth="3.5"
                         strokeLinecap="round"
                         strokeLinejoin="round"
-                        style={{
-                          filter: `drop-shadow(0 0 6px ${color}) drop-shadow(0 0 12px ${color}90)`,
-                          marginTop: "2px",
-                        }}
+                        style={{ marginTop: "2px" }}
                       >
                         <path d="M12 4v15M19 12l-7 7-7-7" />
                       </svg>
@@ -2299,6 +2378,46 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
             );
           }
         });
+
+        return (
+          <>
+            {renderedGroups}
+            {/* Detached particle burst for pointers that just terminated and were removed from current step locals */}
+            {stepEvent?.isLoopTermination && stepEvent?.terminatedVars && (
+              <>
+                {stepEvent.terminatedVars.map((vName: string) => {
+                  const alreadyHandled = visiblePointers.some((p) => p.label === vName);
+                  if (alreadyHandled) return null;
+                  const lastPos = lastKnownPointerPositionsRef.current[vName];
+                  if (!lastPos) return null;
+                  const delayMs = stepEvent?.isBreak ? 400 : 3200;
+                  return (
+                    <PointerParticleBurst
+                      key={`burst-detached-${vName}-${currentStep}`}
+                      x={lastPos.x}
+                      y={lastPos.y}
+                      color={lastPos.color || "#00ff7a"}
+                      label={vName}
+                      delayMs={delayMs}
+                    />
+                  );
+                })}
+              </>
+            )}
+
+            {/* Vanishing particle burst for j+1 when comparison step finishes */}
+            {jPlusOneJustVanished && jPlusOneLastPos && (
+              <PointerParticleBurst
+                key={`burst-detached-jplusone-${currentStep}`}
+                x={jPlusOneLastPos.x}
+                y={jPlusOneLastPos.y}
+                color={jPlusOneLastPos.color || "#f59e0b"}
+                label="j+1"
+                delayMs={0}
+              />
+            )}
+          </>
+        );
       })()}
 
       {/* ═══ NUMERIC VALUES INSIDE UPPER FROSTED GLASS ═══ */}
@@ -2345,6 +2464,7 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
       {blockData.map((b) => {
         const isCompared = isIfStatementLine && hasComparison && (b.index === iA || b.index === iB);
         if (!isCompared && !b.theme.isFocused) return null;
+        if (stepEvent?.isLoopTermination || activeLineCode.trim().startsWith("break") || (loopInfo.isLoopLine && !loopInfo.isPass)) return null;
         const topPx = sceneHeight / 2 - (baselineY + b.h - 110);
         const glowColor =
           b.theme.name === "green"
@@ -2415,16 +2535,10 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
                 (b.index === swapIndices[0] || b.index === swapIndices[1])));
 
         const labelColor = isLeftIndex
-          ? "#00f0ff"
+          ? "#38bdf8"
           : isRightIndex
           ? "#f59e0b"
-          : "#ffffff";
-
-        const textGlow = isLeftIndex
-          ? "0 0 12px rgba(0, 240, 255, 1), 0 0 24px rgba(0, 240, 255, 0.8)"
-          : isRightIndex
-          ? "0 0 12px rgba(245, 158, 11, 1), 0 0 24px rgba(245, 158, 11, 0.8)"
-          : "0 0 10px rgba(255, 255, 255, 0.95), 0 0 20px rgba(255, 255, 255, 0.6)";
+          : "#a1a1aa";
 
         return (
           <div
@@ -2436,21 +2550,117 @@ export const ThreeArrayScene: React.FC<ThreeArraySceneProps> = ({
               transform: "translateX(-50%)",
               zIndex: isLoopIndex ? 35 : 28,
               fontFamily: "'JetBrains Mono', 'SF Mono', Consolas, monospace",
-              fontSize: "14px",
-              fontWeight: 800,
+              fontSize: "13px",
+              fontWeight: 700,
               color: labelColor,
-              textShadow: textGlow,
+              textShadow: "none",
               pointerEvents: "none",
               userSelect: "none",
-              letterSpacing: "0.04em",
-              filter: isFocused ? "none" : "blur(3px) opacity(0.25)",
+              letterSpacing: "0.02em",
+              filter: isFocused ? "none" : "opacity(0.4)",
               transition: "all 0.3s ease",
             }}
           >
-            [{b.index}]
+            {b.index}
           </div>
         );
       })}
+
+      {/* Global CSS keyframes for pointer appear customized by pointer identity */}
+      <style>{`
+        /* Pointer 'i': Sky-blue drop-down with kinetic spring settle, initial pulse then clean state */
+        @keyframes pointerEntrance_i {
+          0% {
+            opacity: 0;
+            transform: translate(-50%, -200%) scale(0.6);
+            filter: drop-shadow(0 0 16px #38bdf8);
+          }
+          60% {
+            opacity: 1;
+            transform: translate(-50%, -90%) scale(1.12);
+            filter: drop-shadow(0 0 8px #38bdf8);
+          }
+          100% {
+            opacity: 1;
+            transform: translate(-50%, -100%) scale(1.0);
+            filter: none;
+          }
+        }
+
+        /* Pointer 'j': Emerald slide-scale in with clean settle without residual glow */
+        @keyframes pointerEntrance_j {
+          0% {
+            opacity: 0;
+            transform: translate(-50%, -100%) scale(0.3);
+            filter: drop-shadow(0 0 16px #00ff7a);
+          }
+          65% {
+            opacity: 1;
+            transform: translate(-50%, -100%) scale(1.15);
+            filter: drop-shadow(0 0 8px #00ff7a);
+          }
+          100% {
+            opacity: 1;
+            transform: translate(-50%, -100%) scale(1.0);
+            filter: none;
+          }
+        }
+
+        /* Pointer 'left': Lateral slide-in from left */
+        @keyframes pointerEntrance_left {
+          0% {
+            opacity: 0;
+            transform: translate(-120%, -100%) scale(0.7);
+            filter: drop-shadow(0 0 14px #38bdf8);
+          }
+          70% {
+            opacity: 1;
+            transform: translate(-46%, -100%) scale(1.1);
+            filter: drop-shadow(0 0 6px #38bdf8);
+          }
+          100% {
+            opacity: 1;
+            transform: translate(-50%, -100%) scale(1.0);
+            filter: none;
+          }
+        }
+
+        /* Pointer 'right': Lateral slide-in from right */
+        @keyframes pointerEntrance_right {
+          0% {
+            opacity: 0;
+            transform: translate(20%, -100%) scale(0.7);
+            filter: drop-shadow(0 0 14px #f59e0b);
+          }
+          70% {
+            opacity: 1;
+            transform: translate(-54%, -100%) scale(1.1);
+            filter: drop-shadow(0 0 6px #f59e0b);
+          }
+          100% {
+            opacity: 1;
+            transform: translate(-50%, -100%) scale(1.0);
+            filter: none;
+          }
+        }
+
+        /* Default fallback */
+        @keyframes pointerEntrance_default {
+          0% {
+            opacity: 0;
+            transform: translate(-50%, -100%) scale(0.5);
+          }
+          70% {
+            opacity: 1;
+            transform: translate(-50%, -100%) scale(1.1);
+          }
+          100% {
+            opacity: 1;
+            transform: translate(-50%, -100%) scale(1.0);
+            filter: none;
+          }
+        }
+      `}</style>
     </div>
   );
 };

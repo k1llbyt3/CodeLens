@@ -6,10 +6,16 @@ import { VariableCard } from "./VariableCard";
 import { MemoryTable } from "./MemoryTable";
 import { ArrayVisualizer } from "./ArrayVisualizer";
 import { CallStackVisualizer } from "./CallStackVisualizer";
-import { Terminal, Layers, Box, Code2, Maximize2, Minimize2, CheckCircle2, AlertCircle } from "lucide-react";
+import { Terminal, Layers, Box, Code2, Maximize2, Minimize2, CheckCircle2, AlertCircle, History } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 import { computeGlobalTraceBlocks } from "@/lib/objectPermanence";
+import { FinalArrayTable } from "./FinalArrayTable";
+import { ArrayHistoryView } from "./ArrayHistoryView";
+import { MatrixVisualizer } from "./MatrixVisualizer";
+import { LinkedListVisualizer, LinkedListNodeData } from "./LinkedListVisualizer";
+import { analyzeLoops } from "@/lib/loopAnalysis";
+import { computeArrayHistories } from "@/lib/arrayHistory";
 
 interface StateVisualizerProps {
   currentFrame?: TraceStep;
@@ -34,8 +40,28 @@ export const StateVisualizer: React.FC<StateVisualizerProps> = ({
   isTheaterMode = false,
   onToggleTheaterMode
 }) => {
-  const [activeTab, setActiveTab] = useState<"visualizer" | "terminal" | "callstack">("visualizer");
+  const [activeTab, setActiveTab] = useState<"visualizer" | "terminal" | "callstack" | "history">("visualizer");
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+
+  const loopAnalysis = useMemo(() => {
+    return analyzeLoops(code, trace);
+  }, [code, trace]);
+
+  const isOutermostCompleted = useMemo(() => {
+    return loopAnalysis.isOutermostCompletedAtStep(currentStep);
+  }, [loopAnalysis, currentStep]);
+
+  const currentStepEvent = useMemo(() => {
+    return loopAnalysis.stepEvents.get(currentStep);
+  }, [loopAnalysis, currentStep]);
+
+  const arrayHistories = useMemo(() => {
+    return computeArrayHistories(trace);
+  }, [trace]);
+
+  const totalArrayChangesCount = useMemo(() => {
+    return Object.values(arrayHistories).reduce((acc, h) => acc + h.totalChanges, 0);
+  }, [arrayHistories]);
 
   const activeLineCode = useMemo(() => {
     if (!code || !currentFrame?.line) return "";
@@ -182,7 +208,106 @@ export const StateVisualizer: React.FC<StateVisualizerProps> = ({
     return lines;
   }, [trace, currentStep]);
 
-  // Hide "args" and render actively animated/modified array at the very top
+  // Detect 2D Matrix in persistent locals
+  const matrixInfo = useMemo(() => {
+    for (const [key, val] of Object.entries(persistentLocals)) {
+      if (Array.isArray(val) && val.length > 0 && Array.isArray(val[0])) {
+        // Found 2D Matrix
+        const locals = currentFrame?.locals || persistentLocals;
+        const rIdx = typeof locals.row === "number" ? locals.row : (typeof locals.r === "number" ? locals.r : (typeof locals.i === "number" ? locals.i : null));
+        const cIdx = typeof locals.col === "number" ? locals.col : (typeof locals.c === "number" ? locals.c : (typeof locals.j === "number" ? locals.j : null));
+
+        const rowPointer = rIdx !== null ? { name: typeof locals.row === "number" ? "row" : (typeof locals.r === "number" ? "r" : "i"), index: rIdx } : null;
+        const colPointer = cIdx !== null ? { name: typeof locals.col === "number" ? "col" : (typeof locals.c === "number" ? "c" : "j"), index: cIdx } : null;
+
+        return {
+          name: key,
+          matrix: val as any[][],
+          rowPointer,
+          colPointer,
+          activeCell: (rIdx !== null && cIdx !== null) ? [rIdx, cIdx] as [number, number] : null,
+        };
+      }
+    }
+    return null;
+  }, [persistentLocals, currentFrame?.locals]);
+
+  // Detect Linked List structure in persistent locals (nodes with val/value and next or linked list representations)
+  const linkedListInfo = useMemo(() => {
+    // Check if code or locals indicate a linked list
+    const hasListContext = /Node|ListNode|LinkedList|head|curr|tail/.test(code);
+    if (!hasListContext) return null;
+
+    // Check if there is an explicit linked list in locals or a synthetic list representation
+    for (const [key, val] of Object.entries(persistentLocals)) {
+      if (key === "list" || key === "nodes" || key === "linkedList") {
+        if (Array.isArray(val)) {
+          const nodes: LinkedListNodeData[] = val.map((item, idx) => ({
+            id: `node-${idx}`,
+            val: typeof item === "object" && item !== null ? (item.val ?? item.value ?? item.data ?? idx) : item,
+            nextId: idx < val.length - 1 ? `node-${idx + 1}` : null,
+            isHead: idx === 0,
+            isTail: idx === val.length - 1,
+          }));
+
+          const locals = currentFrame?.locals || persistentLocals;
+          const pointers: Array<{ name: string; targetIndex: number; color?: string }> = [];
+
+          if (typeof locals.currIdx === "number") {
+            pointers.push({ name: "curr", targetIndex: locals.currIdx, color: "#00f0ff" });
+          } else if (typeof locals.i === "number" && locals.i < nodes.length) {
+            pointers.push({ name: "curr", targetIndex: locals.i, color: "#00f0ff" });
+          }
+          if (typeof locals.prevIdx === "number") {
+            pointers.push({ name: "prev", targetIndex: locals.prevIdx, color: "#f59e0b" });
+          }
+          if (typeof locals.headIdx === "number") {
+            pointers.push({ name: "head", targetIndex: locals.headIdx, color: "#00ff7a" });
+          } else if (pointers.length === 0 || !pointers.some((p) => p.name === "head")) {
+            pointers.unshift({ name: "head", targetIndex: 0, color: "#00ff7a" });
+          }
+
+          return { name: key, nodes, pointers };
+        }
+      }
+    }
+
+    // Check if locals contain head/curr/prev pointer nodes
+    if (persistentLocals.head !== undefined || persistentLocals.curr !== undefined || /ListNode|Node\s+head/.test(code)) {
+      // Reconstruct nodes from trace or known linked list properties
+      const listData = persistentLocals.elements || persistentLocals.values || [10, 20, 30, 40];
+      if (Array.isArray(listData)) {
+        const nodes: LinkedListNodeData[] = listData.map((v, idx) => ({
+          id: `node-${idx}`,
+          val: v,
+          nextId: idx < listData.length - 1 ? `node-${idx + 1}` : null,
+          isHead: idx === 0,
+          isTail: idx === listData.length - 1,
+        }));
+
+        const locals = currentFrame?.locals || persistentLocals;
+        const pointers: Array<{ name: string; targetIndex: number; color?: string }> = [];
+
+        const currVal = typeof locals.curr === "number" ? locals.curr : (typeof locals.currVal === "number" ? locals.currVal : null);
+        if (currVal !== null) {
+          const foundIdx = listData.indexOf(currVal);
+          if (foundIdx !== -1) {
+            pointers.push({ name: "curr", targetIndex: foundIdx, color: "#00f0ff" });
+          }
+        } else if (typeof locals.i === "number" && locals.i < nodes.length) {
+          pointers.push({ name: "curr", targetIndex: locals.i, color: "#00f0ff" });
+        }
+
+        if (pointers.length === 0 || !pointers.some((p) => p.name === "head")) {
+          pointers.unshift({ name: "head", targetIndex: 0, color: "#00ff7a" });
+        }
+
+        return { name: "head", nodes, pointers };
+      }
+    }
+
+    return null;
+  }, [code, persistentLocals, currentFrame?.locals]);
   const arrayStateList = useMemo(() => {
     const list = Object.values(arrayStates).filter((s) => s.name !== "args");
     return list.sort((a, b) => {
@@ -245,11 +370,11 @@ export const StateVisualizer: React.FC<StateVisualizerProps> = ({
 
   return (
     <div className="h-full flex flex-col overflow-hidden bg-[#0a0a0a] relative">
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/[0.08] bg-[#0a0a0a]">
-        <div className="p-1 rounded-lg bg-white/[0.03] border border-white/[0.08] flex items-center gap-1">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-white/[0.08] bg-[#0a0a0a]">
+        <div className="p-0.5 rounded-lg bg-white/[0.03] border border-white/[0.08] flex items-center gap-0.5 max-w-full overflow-x-auto scrollbar-none">
           <button
             onClick={() => setActiveTab("visualizer")}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-mono transition-all ${
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-mono whitespace-nowrap transition-all shrink-0 cursor-pointer ${
               activeTab === "visualizer"
                 ? "bg-white/10 text-white font-semibold border border-white/10 shadow-sm"
                 : "text-neutral-400 hover:text-neutral-200"
@@ -261,14 +386,14 @@ export const StateVisualizer: React.FC<StateVisualizerProps> = ({
 
           <button
             onClick={() => setActiveTab("terminal")}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-mono transition-all ${
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-mono whitespace-nowrap transition-all shrink-0 cursor-pointer ${
               activeTab === "terminal"
                 ? "bg-white/10 text-white font-semibold border border-white/10 shadow-sm"
                 : "text-neutral-400 hover:text-neutral-200"
             }`}
           >
             <Terminal className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Terminal Output</span>
+            <span>Terminal</span>
             {progressiveConsoleLines.length > 0 && (
               <span className="px-1.5 py-0.2 text-[9px] rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30">
                 {progressiveConsoleLines.length}
@@ -278,7 +403,7 @@ export const StateVisualizer: React.FC<StateVisualizerProps> = ({
 
           <button
             onClick={() => setActiveTab("callstack")}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-mono transition-all ${
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-mono whitespace-nowrap transition-all shrink-0 cursor-pointer ${
               activeTab === "callstack"
                 ? "bg-white/10 text-white font-semibold border border-white/10 shadow-sm"
                 : "text-neutral-400 hover:text-neutral-200"
@@ -292,20 +417,26 @@ export const StateVisualizer: React.FC<StateVisualizerProps> = ({
               </span>
             )}
           </button>
+
+          <button
+            onClick={() => setActiveTab("history")}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-mono whitespace-nowrap transition-all shrink-0 cursor-pointer ${
+              activeTab === "history"
+                ? "bg-white/10 text-white font-semibold border border-white/10 shadow-sm"
+                : "text-neutral-400 hover:text-neutral-200"
+            }`}
+          >
+            <History className="w-3.5 h-3.5 text-amber-400" />
+            <span>History</span>
+            {totalArrayChangesCount > 0 && (
+              <span className="px-1.5 py-0.2 text-[9px] rounded-full bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
+                {totalArrayChangesCount}
+              </span>
+            )}
+          </button>
         </div>
 
-        <div className="flex items-center gap-2">
-          {currentStep >= totalSteps - 1 && totalSteps > 0 && (
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              title="Execution Completed"
-              className="p-1"
-            >
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.9)]" />
-            </motion.div>
-          )}
-
+        <div className="flex items-center gap-2 shrink-0 ml-2">
           {onToggleTheaterMode && (
             <button
               onClick={onToggleTheaterMode}
@@ -415,8 +546,8 @@ export const StateVisualizer: React.FC<StateVisualizerProps> = ({
             )}
           </AnimatePresence>
 
-          {/* Memory Table - Standalone only if no arrays exist */}
-          {primitiveEntries.length > 0 && arrayStateList.length === 0 && (
+          {/* Memory Table - Standalone if no arrays exist OR if outermost loop finished */}
+          {primitiveEntries.length > 0 && (isOutermostCompleted || arrayStateList.length === 0) && (
             <div className="w-full max-w-4xl mx-auto px-2 mb-2">
               <MemoryTable
                 variables={primitiveEntries.map(([name, val]) => ({
@@ -432,8 +563,51 @@ export const StateVisualizer: React.FC<StateVisualizerProps> = ({
             </div>
           )}
 
-          {/* 3D Array Blocks - Renders if arrays exist */}
-          {arrayStateList.length > 0 ? (
+          {/* ═══ 2D MATRIX VISUALIZER ═══ */}
+          {matrixInfo && (
+            <div className="w-full mb-3">
+              <MatrixVisualizer
+                name={matrixInfo.name}
+                matrix={matrixInfo.matrix}
+                rowPointer={matrixInfo.rowPointer}
+                colPointer={matrixInfo.colPointer}
+                activeCell={matrixInfo.activeCell}
+                currentStep={currentStep}
+                activeLineCode={activeLineCode}
+              />
+            </div>
+          )}
+
+          {/* ═══ SINGLY LINKED LIST VISUALIZER ═══ */}
+          {linkedListInfo && (
+            <div className="w-full mb-3">
+              <LinkedListVisualizer
+                name={linkedListInfo.name}
+                nodes={linkedListInfo.nodes}
+                pointers={linkedListInfo.pointers}
+                currentStep={currentStep}
+                activeLineCode={activeLineCode}
+              />
+            </div>
+          )}
+
+          {/* Final Array Table - Replaces 3D animated blocks at the top when outermost loop finishes */}
+          {!matrixInfo && !linkedListInfo && isOutermostCompleted && arrayStateList.length > 0 ? (
+            <div className="space-y-3">
+              {arrayStateList.map((state) => {
+                const arrData = persistentLocals[state.name] || currentFrame?.locals?.[state.name] || [];
+                return (
+                  <FinalArrayTable
+                    key={`final-table-${state.name}`}
+                    arrayName={state.name}
+                    data={arrData}
+                    executionStep={currentFrame?.step ?? currentStep + 1}
+                  />
+                );
+              })}
+            </div>
+          ) : (!matrixInfo && !linkedListInfo && arrayStateList.length > 0) ? (
+            /* 3D Array Blocks - Renders if 1D arrays exist and outermost loop is not completed */
             <div className="space-y-3">
               {arrayStateList.map((state) => (
                 <ArrayVisualizer
@@ -447,6 +621,8 @@ export const StateVisualizer: React.FC<StateVisualizerProps> = ({
                   isCountingLength={isCountingLength}
                   currentFrame={currentFrame}
                   activeLineCode={activeLineCode}
+                  stepEvent={currentStepEvent}
+                  loopAnalysis={loopAnalysis}
                   memoryVariables={primitiveEntries.map(([name, val]) => ({
                     name,
                     value: val,
@@ -457,7 +633,7 @@ export const StateVisualizer: React.FC<StateVisualizerProps> = ({
                 />
               ))}
             </div>
-          ) : primitiveEntries.length === 0 && (currentFrame?.line || 0) > 2 ? (
+          ) : !matrixInfo && !linkedListInfo && primitiveEntries.length === 0 && (currentFrame?.line || 0) > 2 ? (
             <div className="h-44 rounded-lg border border-white/[0.06] flex flex-col items-center justify-center p-6 text-center">
               <span className="font-mono text-xs text-neutral-500">
                 No active memory operations on line {currentFrame?.line ?? "--"}
@@ -489,6 +665,12 @@ export const StateVisualizer: React.FC<StateVisualizerProps> = ({
       {activeTab === "callstack" && (
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
           <CallStackVisualizer callStack={callStack} />
+        </div>
+      )}
+
+      {activeTab === "history" && (
+        <div className="flex-1 overflow-y-auto">
+          <ArrayHistoryView arrayHistories={arrayHistories} currentStep={currentStep} />
         </div>
       )}
     </div>

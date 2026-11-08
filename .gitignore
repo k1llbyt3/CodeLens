@@ -45,4 +45,7 @@ CLAUDE.md
 venv/
 .next
 codelens-prd-v1.md 
-graphify-out/
+graphify-out/*
+GRAPH_REPORT.md
+graph.json
+

@@ -1,7 +1,7 @@
-# Graph Report - CodeLens  (2026-10-10)
+# Graph Report - CodeLens  (2026-11-08)
 
 ## Corpus Check
-- 37 files · ~267,935 words
+- 37 files · ~266,997 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary

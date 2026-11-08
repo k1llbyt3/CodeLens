@@ -52,7 +52,7 @@ export const CallStackVisualizer: React.FC<CallStackVisualizerProps> = ({ callSt
                     : "bg-neutral-800/60 text-neutral-500 border-neutral-700/50"
                 }`}
               >
-                Frame #{index}
+                {isTop ? "Active" : "Caller"}
               </span>
             </motion.div>
           );

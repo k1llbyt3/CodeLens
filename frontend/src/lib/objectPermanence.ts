@@ -163,6 +163,10 @@ export function computeGlobalTraceBlocks(
     const currLocals = currentFrame?.locals || {};
     const hasJPlus1 = activeLine.includes("j + 1") || activeLine.includes("j+1");
 
+    const isLoopConditionLine =
+      activeLine.includes("for") ||
+      activeLine.includes("while");
+
     const isComparisonLine =
       activeLine.includes(">") ||
       activeLine.includes("<") ||
@@ -215,7 +219,16 @@ export function computeGlobalTraceBlocks(
 
         pointers.push({ name: k, index: val, actionType });
 
-        if (k === "j" && hasJPlus1 && val + 1 >= 0 && val + 1 < currentBlocks.length) {
+        // Only include j+1 pointer if this line is an actual comparison/swap or array access involving j+1,
+        // and NEVER on loop condition lines (e.g. for (int j = 0; ...)) or when j is out of bounds
+        if (
+          k === "j" &&
+          hasJPlus1 &&
+          (isComparisonLine || isWriteLine || activeSwapIndices) &&
+          !isLoopConditionLine &&
+          val + 1 >= 0 &&
+          val + 1 < currentBlocks.length
+        ) {
           const isJPlus1InSwap =
             activeSwapIndices &&
             (val + 1 === activeSwapIndices[0] || val + 1 === activeSwapIndices[1]);

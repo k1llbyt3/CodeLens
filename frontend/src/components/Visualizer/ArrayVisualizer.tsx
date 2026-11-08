@@ -28,6 +28,8 @@ export const ArrayVisualizer: React.FC<ArrayVisualizerProps> = ({
   activeLineCode = "",
   currentStep = 0,
   memoryVariables = [],
+  stepEvent,
+  loopAnalysis,
 }) => {
   const [activeOverrideIdx, setActiveOverrideIdx] = useState<number | null>(null);
 
@@ -221,6 +223,8 @@ export const ArrayVisualizer: React.FC<ArrayVisualizerProps> = ({
             currentFrame={currentFrame}
             activeLineCode={activeLineCode}
             currentStep={currentStep}
+            stepEvent={stepEvent}
+            loopAnalysis={loopAnalysis}
             onBlockClick={(idx) => setActiveOverrideIdx(activeOverrideIdx === idx ? null : idx)}
           />
         </div>

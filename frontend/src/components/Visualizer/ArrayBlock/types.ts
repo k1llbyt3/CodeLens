@@ -25,6 +25,8 @@ export interface ThreeArraySceneProps {
   activeLineCode?: string;
   currentStep?: number;
   memoryVariables?: any[];
+  stepEvent?: any;
+  loopAnalysis?: any;
   onBlockClick?: (index: number) => void;
   className?: string;
 }

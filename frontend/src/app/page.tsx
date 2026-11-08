@@ -201,6 +201,7 @@ export default function CodeLensPage() {
   }, [handleRunTrace, handleTogglePlay, handleStepForward, handleStepBack]);
 
   const [isTheaterMode, setIsTheaterMode] = useState(false);
+  const [isEditorExpanded, setIsEditorExpanded] = useState(false);
 
   const [splitRatio, setSplitRatio] = useState<number>(50); // percentage of editor width (18% to 50%)
   const [isDraggingSplit, setIsDraggingSplit] = useState<boolean>(false);
@@ -215,8 +216,8 @@ export default function CodeLensPage() {
 
     const handleMouseMove = (e: MouseEvent) => {
       const newPct = (e.clientX / window.innerWidth) * 100;
-      // Clamped between 18% (can move to the left) and 50% (strictly limited to right)
-      const clamped = Math.max(18, Math.min(50, newPct));
+      // Clamped between 15% and 85%
+      const clamped = Math.max(15, Math.min(85, newPct));
       setSplitRatio(clamped);
     };
 
@@ -253,7 +254,7 @@ export default function CodeLensPage() {
       <main className="flex-1 flex overflow-hidden relative">
         {!isTheaterMode && (
           <section
-            style={{ width: `${splitRatio}%` }}
+            style={{ width: isEditorExpanded ? "100%" : `${splitRatio}%` }}
             className={`h-full overflow-hidden ${isDraggingSplit ? "" : "transition-all duration-150"}`}
           >
             <CodeEditor
@@ -261,67 +262,48 @@ export default function CodeLensPage() {
               onChange={(val) => setCode(val || "")}
               currentLine={currentFrame?.line}
               errorLine={errorLine}
+              isExpanded={isEditorExpanded}
+              onToggleExpand={() => setIsEditorExpanded((prev) => !prev)}
+              splitRatio={splitRatio}
+              onSetSplitRatio={(ratio) => setSplitRatio(ratio)}
             />
           </section>
         )}
 
-        {!isTheaterMode && (
+        {!isTheaterMode && !isEditorExpanded && (
           <div
             onMouseDown={handleMouseDownSplit}
-            className={`relative group w-1.5 hover:w-2 bg-[#171717] hover:bg-cyan-500/70 cursor-col-resize flex items-center justify-center transition-colors z-40 ${
+            className={`relative group w-1.5 hover:w-2 bg-[#171717] hover:bg-cyan-500/70 cursor-col-resize flex items-center justify-center transition-colors z-40 select-none ${
               isDraggingSplit ? "bg-cyan-400 w-2 shadow-[0_0_12px_rgba(6,182,212,0.8)]" : ""
             }`}
-            title="Drag to expand visualizer"
+            title="Drag to resize editor and visualizer"
           >
             {/* Grab handle indicator */}
-            <div className="absolute flex flex-col items-center gap-1 py-1.5 px-0.5 rounded-full bg-neutral-800/90 group-hover:bg-cyan-950 border border-white/10 group-hover:border-cyan-400/50 shadow-md pointer-events-none transition-all">
+            <div className="absolute flex flex-col items-center gap-1 py-2 px-0.5 rounded-full bg-neutral-800/90 group-hover:bg-cyan-950 border border-white/10 group-hover:border-cyan-400/50 shadow-md pointer-events-none transition-all">
               <span className="w-0.5 h-3 bg-neutral-400 group-hover:bg-cyan-300 rounded-full" />
               <span className="w-0.5 h-3 bg-neutral-400 group-hover:bg-cyan-300 rounded-full" />
-            </div>
-
-            {/* Quick adjust preset tags appearing on hover */}
-            <div className="absolute top-3 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 bg-[#121212]/95 border border-white/10 rounded-md p-1 shadow-xl z-50 text-[10px] font-mono pointer-events-auto">
-              <button
-                onClick={(e) => { e.stopPropagation(); setSplitRatio(25); }}
-                className={`px-1.5 py-0.5 rounded hover:bg-cyan-500/20 hover:text-cyan-300 ${splitRatio <= 28 ? "text-cyan-400 font-bold bg-cyan-950/60" : "text-neutral-400"}`}
-                title="Compact Editor (25%)"
-              >
-                25%
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); setSplitRatio(35); }}
-                className={`px-1.5 py-0.5 rounded hover:bg-cyan-500/20 hover:text-cyan-300 ${splitRatio > 28 && splitRatio < 45 ? "text-cyan-400 font-bold bg-cyan-950/60" : "text-neutral-400"}`}
-                title="Medium (35%)"
-              >
-                35%
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); setSplitRatio(50); }}
-                className={`px-1.5 py-0.5 rounded hover:bg-cyan-500/20 hover:text-cyan-300 ${splitRatio >= 48 ? "text-cyan-400 font-bold bg-cyan-950/60" : "text-neutral-400"}`}
-                title="Half Split (50% max)"
-              >
-                50%
-              </button>
             </div>
           </div>
         )}
 
-        <section
-          style={{ width: isTheaterMode ? "100%" : `${100 - splitRatio}%` }}
-          className={`h-full overflow-hidden ${isDraggingSplit ? "" : "transition-all duration-150"}`}
-        >
-          <StateVisualizer
-            currentFrame={currentFrame}
-            previousFrame={previousFrame}
-            totalSteps={trace.length}
-            currentStep={currentStep}
-            trace={trace}
-            code={code}
-            error={error}
-            isTheaterMode={isTheaterMode}
-            onToggleTheaterMode={() => setIsTheaterMode((prev) => !prev)}
-          />
-        </section>
+        {!isEditorExpanded && (
+          <section
+            style={{ width: isTheaterMode ? "100%" : `${100 - splitRatio}%` }}
+            className={`h-full overflow-hidden ${isDraggingSplit ? "" : "transition-all duration-150"}`}
+          >
+            <StateVisualizer
+              currentFrame={currentFrame}
+              previousFrame={previousFrame}
+              totalSteps={trace.length}
+              currentStep={currentStep}
+              trace={trace}
+              code={code}
+              error={error}
+              isTheaterMode={isTheaterMode}
+              onToggleTheaterMode={() => setIsTheaterMode((prev) => !prev)}
+            />
+          </section>
+        )}
       </main>
 
       <PlaybackBar

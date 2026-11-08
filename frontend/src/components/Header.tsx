@@ -21,13 +21,25 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="h-14 flex items-center justify-between px-6 bg-[#0a0a0a] border-b border-neutral-800 select-none z-20">
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-md bg-neutral-900 border border-neutral-800 flex items-center justify-center">
-           C
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-xs font-semibold tracking-wide text-neutral-100">
-              CodeLens
-            </span>
+          {/* Main Logo Container */}
+          <div className="relative flex items-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo.png"
+              alt="CodeLens"
+              className="h-12 max-w-[160px] object-contain"
+              onError={(e) => {
+                // Graceful fallback if image fails to load
+                e.currentTarget.style.display = "none";
+                const fallback = document.getElementById("codelens-logo-fallback");
+                if (fallback) fallback.style.display = "flex";
+              }}
+            />
+            <div id="codelens-logo-fallback" className="hidden items-center gap-2">
+              <span className="font-mono text-sm font-bold tracking-wider text-cyan-400">
+                CodeLens
+              </span>
+            </div>
           </div>
         </div>
 
@@ -52,23 +64,6 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        <button
-          onClick={onRunTrace}
-          disabled={isLoading}
-          className="flex items-center gap-2 px-3.5 py-1.5 rounded-md bg-neutral-100 text-neutral-900 font-mono text-xs font-medium hover:bg-white active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none transition-all"
-        >
-          {isLoading ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          ) : (
-            <Play className="w-3 h-3 fill-current" />
-          )}
-          <span>{isLoading ? "Tracing" : "Run Trace"}</span>
-          <kbd className="hidden sm:inline-block px-1 py-0.2 text-[9px] font-mono bg-neutral-300 text-neutral-900 rounded-sm">
-            Ctrl+↵
-          </kbd>
-        </button>
-      </div>
     </header>
   );
 };
