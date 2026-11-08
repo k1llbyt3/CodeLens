@@ -139,9 +139,9 @@ export const PlaybackBar: React.FC<PlaybackBarProps> = ({
         {/* Speed Controls: 0.25x (6000ms), 0.5x (3000ms), 1x (1500ms) */}
         <div className="flex items-center gap-1 bg-white/[0.04] p-1 rounded-lg border border-white/[0.08]">
           {[
-            { label: "0.25x", val: 0.25, tooltip: "0.25x Ultra Slow (6000ms)" },
-            { label: "0.5x", val: 0.5, tooltip: "0.5x Slow (3000ms)" },
-            { label: "1x", val: 1, tooltip: "1x Normal (1500ms)" }
+            { label: "0.25x", val: 0.25, tooltip: "0.25x Ultra Slow (8000ms)" },
+            { label: "0.5x", val: 0.5, tooltip: "0.5x Slow (4500ms)" },
+            { label: "1x", val: 1, tooltip: "1x Normal (2800ms)" }
           ].map((item) => (
             <button
               key={item.label}

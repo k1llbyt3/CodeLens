@@ -12,11 +12,13 @@ interface MemoryTableProps {
     isActive?: boolean;
   }>;
   activeLineCode?: string;
+  currentStep?: number;
 }
 
 export const MemoryTable: React.FC<MemoryTableProps> = ({
   variables,
   activeLineCode = "",
+  currentStep = 0,
 }) => {
   if (!variables || variables.length === 0) return null;
 
@@ -58,7 +60,27 @@ export const MemoryTable: React.FC<MemoryTableProps> = ({
     } else {
       setIsSumSettled(true);
     }
-  }, [isSumCalculation, activeLineCode]);
+  }, [isSumCalculation, activeLineCode, currentStep]);
+
+  // Is current line a length assignment (e.g. int n = arr.length, n = arr.length - 1)?
+  const lengthVarTarget = useMemo(() => {
+    const match = activeLineCode.match(/\b(?:int|var|let|const)?\s*([a-zA-Z_]\w*)\s*=\s*.*?(?:\.length\b|len\s*\()/);
+    return match ? match[1] : null;
+  }, [activeLineCode]);
+
+  const [isLengthSettled, setIsLengthSettled] = useState(false);
+
+  useEffect(() => {
+    if (lengthVarTarget) {
+      setIsLengthSettled(false);
+      const timer = setTimeout(() => {
+        setIsLengthSettled(true);
+      }, 2600);
+      return () => clearTimeout(timer);
+    } else {
+      setIsLengthSettled(true);
+    }
+  }, [lengthVarTarget, activeLineCode, currentStep]);
 
   // Dynamic variable comparison parser (e.g. if (sum == target), if (sum < target), etc.)
   const compInfo = useMemo(() => {
@@ -70,29 +92,35 @@ export const MemoryTable: React.FC<MemoryTableProps> = ({
 
     const leftVar = match[1];
     const op = match[2];
-    const rightVar = match[3];
+    const rightOperand = match[3];
 
     const vA = orderedVariables.find((v) => v.name === leftVar);
-    const vB = orderedVariables.find((v) => v.name === rightVar);
+    let valB: any = undefined;
+    const vB = orderedVariables.find((v) => v.name === rightOperand);
+    if (vB) {
+      valB = vB.value;
+    } else if (!isNaN(Number(rightOperand))) {
+      valB = Number(rightOperand);
+    }
 
-    if (!vA || !vB) return null;
+    if (!vA || valB === undefined) return null;
 
     const idxA = orderedVariables.findIndex((v) => v.name === leftVar);
-    const idxB = orderedVariables.findIndex((v) => v.name === rightVar);
+    const idxB = vB ? orderedVariables.findIndex((v) => v.name === rightOperand) : -1;
 
     let isTrue = false;
-    if (op === "==") isTrue = vA.value === vB.value;
-    else if (op === "!=") isTrue = vA.value !== vB.value;
-    else if (op === "<") isTrue = vA.value < vB.value;
-    else if (op === ">") isTrue = vA.value > vB.value;
-    else if (op === "<=") isTrue = vA.value <= vB.value;
-    else if (op === ">=") isTrue = vA.value >= vB.value;
+    if (op === "==") isTrue = vA.value === valB;
+    else if (op === "!=") isTrue = vA.value !== valB;
+    else if (op === "<") isTrue = vA.value < valB;
+    else if (op === ">") isTrue = vA.value > valB;
+    else if (op === "<=") isTrue = vA.value <= valB;
+    else if (op === ">=") isTrue = vA.value >= valB;
 
     return {
       leftVar,
-      rightVar,
+      rightVar: rightOperand,
       valA: vA.value,
-      valB: vB.value,
+      valB,
       op,
       idxA,
       idxB,
@@ -141,41 +169,100 @@ export const MemoryTable: React.FC<MemoryTableProps> = ({
     return () => cancelAnimationFrame(raf);
   }, [compInfo, orderedVariables]);
 
+  // Synchronous + fallback offset calculation for comparison glide
+  const compOffsets = useMemo(() => {
+    if (!compInfo) return { left: -120, right: 120 };
+
+    const leftVar = compInfo.leftVar;
+    const rightVar = compInfo.rightVar;
+
+    let offA = offsets[leftVar];
+    let offB = offsets[rightVar];
+
+    if (offA === undefined || offB === undefined) {
+      if (typeof document !== "undefined" && centerRef.current) {
+        const centerRect = centerRef.current.getBoundingClientRect();
+        const elA = cellValueRefs.current[leftVar] || document.getElementById(`memory-cell-value-${leftVar}`);
+        const elB = cellValueRefs.current[rightVar] || document.getElementById(`memory-cell-value-${rightVar}`);
+
+        if (elA && elB && centerRect.width > 0) {
+          const rectA = elA.getBoundingClientRect();
+          const rectB = elB.getBoundingClientRect();
+          const centerMidX = centerRect.left + centerRect.width / 2;
+          const originA_X = rectA.left + rectA.width / 2;
+          const originB_X = rectB.left + rectB.width / 2;
+          if (rectA.width > 0 && rectB.width > 0) {
+            offA = centerMidX - originA_X - 26;
+            offB = centerMidX - originB_X + 26;
+          }
+        }
+      }
+    }
+
+    if (offA === undefined || offA === null) {
+      const idxA = orderedVariables.findIndex((v) => v.name === leftVar);
+      offA = ((orderedVariables.length - 1) / 2 - (idxA !== -1 ? idxA : 0)) * 75 - 26;
+    }
+    if (offB === undefined || offB === null) {
+      const idxB = orderedVariables.findIndex((v) => v.name === rightVar);
+      offB = ((orderedVariables.length - 1) / 2 - (idxB !== -1 ? idxB : orderedVariables.length - 1)) * 75 + 26;
+    }
+
+    return { left: offA, right: offB };
+  }, [compInfo, orderedVariables, offsets]);
+
   return (
-    <div className="w-full flex flex-col items-center select-none relative my-1">
+    <div className="w-full flex flex-col items-center select-none my-1">
       {/* ═══ SINGLE OUTLINED RECTANGLE (BOXES & LABELS 100% STATIC) ═══ */}
       <div className="w-full rounded-lg border border-white/20 bg-transparent overflow-visible relative min-h-[58px]">
         {/* ═══ CENTERED OPERATOR & NUMBERS + FALSE/TRUE (INTRO & OUTRO FROM EXACT SLOTS) ═══ */}
         <div
           ref={centerRef}
-          className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-30"
+          className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
         >
           <AnimatePresence>
             {compInfo && (
               <motion.div
-                initial={{ scale: 0.85, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.85, opacity: 0 }}
-                transition={{ duration: 0.35, ease: "easeOut" }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
                 className="flex flex-col items-center justify-center relative"
               >
-                {/* 17 == 9 equation row with tight proximity to == */}
-                <div className="flex items-center gap-1.5">
+                {/* 17 == 9 equation row with numbers flying in smoothly from their respective variable cells */}
+                <div className="flex items-center gap-2">
                   {/* Left number (e.g. 17 from sum) */}
                   <motion.span
-                    layoutId={`var-val-${compInfo.leftVar}`}
-                    className="font-mono text-lg font-black text-cyan-300 drop-shadow-[0_0_16px_rgba(56,189,248,1)]"
-                    transition={{ type: "spring", stiffness: 140, damping: 18 }}
+                    initial={{
+                      x: -compOffsets.left,
+                      opacity: 0.85,
+                      scale: 0.9,
+                    }}
+                    animate={{
+                      x: 0,
+                      opacity: 1,
+                      scale: 1.1,
+                    }}
+                    exit={{
+                      x: -compOffsets.left,
+                      opacity: 0,
+                      scale: 0.9,
+                    }}
+                    transition={{
+                      duration: 0.75,
+                      ease: [0.22, 1, 0.36, 1],
+                    }}
+                    className="font-mono text-xl font-black text-cyan-300 drop-shadow-[0_0_16px_rgba(56,189,248,1)]"
                   >
                     {compInfo.valA}
                   </motion.span>
 
-                  {/* Operator == */}
+                  {/* Operator == appears strictly AFTER numbers meet */}
                   <motion.span
                     initial={{ scale: 0, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     exit={{ scale: 0, opacity: 0 }}
-                    transition={{ duration: 0.25, delay: 0.1 }}
+                    transition={{ duration: 0.35, delay: 0.4, ease: "easeOut" }}
                     className={`font-mono text-2xl font-black leading-none mx-0.5 ${
                       compInfo.isTrue
                         ? "text-emerald-400 drop-shadow-[0_0_16px_rgba(74,222,128,0.95)]"
@@ -187,20 +274,37 @@ export const MemoryTable: React.FC<MemoryTableProps> = ({
 
                   {/* Right number (e.g. 9 from target) */}
                   <motion.span
-                    layoutId={`var-val-${compInfo.rightVar}`}
-                    className="font-mono text-lg font-black text-amber-300 drop-shadow-[0_0_16px_rgba(245,158,11,1)]"
-                    transition={{ type: "spring", stiffness: 140, damping: 18 }}
+                    initial={{
+                      x: -compOffsets.right,
+                      opacity: 0.85,
+                      scale: 0.9,
+                    }}
+                    animate={{
+                      x: 0,
+                      opacity: 1,
+                      scale: 1.1,
+                    }}
+                    exit={{
+                      x: -compOffsets.right,
+                      opacity: 0,
+                      scale: 0.9,
+                    }}
+                    transition={{
+                      duration: 0.75,
+                      ease: [0.22, 1, 0.36, 1],
+                    }}
+                    className="font-mono text-xl font-black text-amber-300 drop-shadow-[0_0_16px_rgba(245,158,11,1)]"
                   >
                     {compInfo.valB}
                   </motion.span>
                 </div>
 
-                {/* BIGGER FALSE / TRUE label directly beneath == */}
+                {/* BIGGER FALSE / TRUE label reveals distinctly beneath == */}
                 <motion.span
-                  initial={{ y: 6, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  exit={{ y: 6, opacity: 0 }}
-                  transition={{ duration: 0.25, delay: 0.15 }}
+                  initial={{ y: 8, opacity: 0, scale: 0.8 }}
+                  animate={{ y: 0, opacity: 1, scale: 1 }}
+                  exit={{ y: 8, opacity: 0, scale: 0.8 }}
+                  transition={{ duration: 0.35, delay: 0.8, ease: "easeOut" }}
                   className={`font-mono text-base font-black tracking-widest mt-1 leading-none ${
                     compInfo.isTrue
                       ? "text-emerald-400 drop-shadow-[0_0_16px_rgba(74,222,128,1)]"
@@ -222,25 +326,60 @@ export const MemoryTable: React.FC<MemoryTableProps> = ({
             // Do NOT blur the compared variables (sum, target); only blur other unrelated variables if comparison is active
             const isBlurred = Boolean(compInfo && !isCompared);
             const isHighlighted = item.isActive || isCompared;
-            const isMutated = item.isMutated;
-
             const isSumItem = item.name === "sum";
 
-            // STRICT NO-PRE-STORE: Show previous value or "—" until flight settles
-            const displayValue =
-              isSumItem && isSumCalculation && !isSumSettled
-                ? (item.prevValue ?? "—")
-                : item.value;
+            const isTempItem = item.name === "temp" || item.name === "tmp";
+            const isTempAssigning = isTempItem && /\b(?:int|var|let)?\s*(?:temp|tmp)\s*=\s*/.test(activeLineCode);
+
+            // STRICT NO-PRE-STORE: Show empty "—" until flight settles
+            const isLengthTarget = lengthVarTarget === item.name;
+            let displayValue: any = item.value ?? "—";
+            if (isSumItem && isSumCalculation && !isSumSettled) {
+              displayValue = "—"; // Clear sum to empty whenever int sum = is calculated!
+            } else if (isLengthTarget && !isLengthSettled) {
+              displayValue = "—";
+            } else if (isTempItem && (isTempAssigning || item.value === undefined || item.value === null)) {
+              displayValue = "—";
+            }
+
+            // Suppress mutation pulse while variable calculation is still in flight
+            const isMutated =
+              item.isMutated &&
+              !(isLengthTarget && !isLengthSettled) &&
+              !(isSumItem && isSumCalculation && !isSumSettled);
 
             return (
-              <div
+              <motion.div
                 key={item.name}
+                id={`memory-cell-${item.name}`}
+                animate={
+                  isMutated
+                    ? {
+                        borderColor: ["rgba(255,255,255,0.2)", "rgba(56,189,248,0.9)", "rgba(255,255,255,0.2)"],
+                      }
+                    : {}
+                }
+                transition={{ duration: 0.5 }}
                 style={{
                   filter: isBlurred ? "blur(3.5px) opacity(0.20)" : "none",
                   transition: "filter 0.4s ease, opacity 0.4s ease",
                 }}
                 className="flex flex-col justify-between px-3 py-1.5 min-w-[62px] flex-grow bg-transparent transition-all duration-200 relative"
               >
+                {/* Visual Radiant Aura Pulse when variable value updates */}
+                {isMutated && (
+                  <motion.div
+                    key={`mutate-pulse-${item.name}-${String(displayValue)}`}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{
+                      opacity: [0, 1, 1, 0],
+                      scale: [0.70, 1.10, 1],
+                    }}
+                    transition={{ duration: 0.9, ease: "easeOut" }}
+                    className="absolute inset-0 rounded border-2 border-cyan-400 bg-cyan-400/20 shadow-[0_0_22px_rgba(56,189,248,0.9),inset_0_0_10px_rgba(56,189,248,0.5)] pointer-events-none z-1"
+                  />
+                )}
+
                 {/* Fixed stationary variable name - crisp and highlighted for compared variables */}
                 <span
                   className={`text-[10px] font-mono font-extrabold tracking-wider select-none transition-colors duration-200 ${
@@ -260,22 +399,25 @@ export const MemoryTable: React.FC<MemoryTableProps> = ({
                   ref={(el) => {
                     cellValueRefs.current[item.name] = el;
                   }}
-                  className="h-6 flex items-center mt-0.5 relative z-20"
+                  className="h-6 flex items-center mt-0.5 relative z-5"
                 >
                   {!isCompared ? (
                     <AnimatePresence mode="popLayout" initial={false}>
                       <motion.span
                         key={`${item.name}-${String(displayValue)}`}
-                        layoutId={`var-val-${item.name}`}
-                        initial={{ opacity: isSumItem && isSumSettled ? 0 : 1 }}
+                        initial={
+                          isMutated
+                            ? { opacity: 0 }
+                            : { opacity: isSumItem && !isSumSettled ? 0.3 : 1 }
+                        }
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        transition={{ duration: 0.2 }}
+                        transition={{ duration: 0.3 }}
                         className={`font-mono text-xs font-bold ${
-                          isHighlighted
+                          isMutated
+                            ? "text-cyan-300 drop-shadow-[0_0_14px_rgba(56,189,248,1)]"
+                            : isHighlighted
                             ? "text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.85)]"
-                            : isMutated
-                            ? "text-white"
                             : "text-neutral-200"
                         }`}
                       >
@@ -283,10 +425,12 @@ export const MemoryTable: React.FC<MemoryTableProps> = ({
                       </motion.span>
                     </AnimatePresence>
                   ) : (
-                    <div className="w-2 h-4" />
+                    <span className="font-mono text-xs font-bold text-neutral-500 opacity-25">
+                      {String(displayValue)}
+                    </span>
                   )}
                 </div>
-              </div>
+              </motion.div>
             );
           })}
         </div>

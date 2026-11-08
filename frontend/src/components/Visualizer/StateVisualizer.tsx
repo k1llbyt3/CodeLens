@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useRef, useEffect } from "react";
 import { TraceStep } from "@/types/tracer";
 import { VariableCard } from "./VariableCard";
 import { MemoryTable } from "./MemoryTable";
@@ -35,6 +35,7 @@ export const StateVisualizer: React.FC<StateVisualizerProps> = ({
   onToggleTheaterMode
 }) => {
   const [activeTab, setActiveTab] = useState<"visualizer" | "terminal" | "callstack">("visualizer");
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   const activeLineCode = useMemo(() => {
     if (!code || !currentFrame?.line) return "";
@@ -60,6 +61,19 @@ export const StateVisualizer: React.FC<StateVisualizerProps> = ({
       });
     }
 
+    return accum;
+  }, [trace, currentStep]);
+
+  const prevPersistentLocals = useMemo(() => {
+    if (!trace || currentStep <= 0) return {};
+    const accum: Record<string, any> = {};
+    const maxIdx = currentStep - 1;
+    for (let i = 0; i <= maxIdx; i++) {
+      const frameLocals = trace[i]?.locals || {};
+      Object.entries(frameLocals).forEach(([k, v]) => {
+        accum[k] = v;
+      });
+    }
     return accum;
   }, [trace, currentStep]);
 
@@ -95,7 +109,7 @@ export const StateVisualizer: React.FC<StateVisualizerProps> = ({
         pointerNames.has(key)
       ) return; // Ignore args, temp, system notification messages, and array pointers
 
-      const isMutated = prevLocals[key] !== undefined && prevLocals[key] !== val;
+      const isMutated = prevPersistentLocals[key] !== val;
       const isReferenced = activeIdentifiers.has(key);
 
       if (isMutated || isReferenced) {
@@ -107,11 +121,49 @@ export const StateVisualizer: React.FC<StateVisualizerProps> = ({
       }
     });
 
+    const lengthMatch = activeLineCode.match(/\b(?:int|var|let|const)?\s*([a-zA-Z_]\w*)\s*=\s*(.*)/);
+    const assignedLengthVar = lengthMatch ? lengthMatch[1] : null;
+    const isLengthAssign = activeLineCode.includes(".length") || activeLineCode.includes("len(");
+    if (isLengthAssign && assignedLengthVar && !pointerNames.has(assignedLengthVar) && (prims[assignedLengthVar] === undefined || prims[assignedLengthVar] === null)) {
+      let resolvedVal: any = undefined;
+      for (let s = currentStep + 1; s < trace.length; s++) {
+        if (typeof trace[s]?.locals?.[assignedLengthVar] === "number") {
+          resolvedVal = trace[s].locals[assignedLengthVar];
+          break;
+        }
+      }
+      if (typeof resolvedVal !== "number") {
+        try {
+          const firstArr = Object.values(arrayStates)[0];
+          const arrLen = firstArr?.blocks?.length ?? 4;
+          let expr = (lengthMatch?.[2] || "")
+            .replace(/;.*$/, "")
+            .replace(/\b(?:[a-zA-Z_]\w*\.)?length\b/g, String(arrLen))
+            .replace(/\blen\s*\([^)]*\)/g, String(arrLen));
+          Object.entries(prims).forEach(([k, v]) => {
+            if (typeof v === "number") {
+              expr = expr.replace(new RegExp(`\\b${k}\\b`, "g"), String(v));
+            }
+          });
+          const evalRes = Function(`"use strict"; return (${expr})`)();
+          if (typeof evalRes === "number" && !isNaN(evalRes)) {
+            resolvedVal = evalRes;
+          }
+        } catch {
+          resolvedVal = Object.values(arrayStates)[0]?.blocks?.length ?? 4;
+        }
+      }
+      if (resolvedVal !== undefined && resolvedVal !== null) {
+        prims[assignedLengthVar] = resolvedVal;
+        active.add(assignedLengthVar);
+      }
+    }
+
     return {
       persistentPrimitives: prims,
       activeKeys: active
     };
-  }, [persistentLocals, prevLocals, activeIdentifiers, pointerNames]);
+  }, [persistentLocals, prevLocals, activeIdentifiers, pointerNames, activeLineCode, currentStep, trace, arrayStates]);
 
   const progressiveConsoleLines = useMemo(() => {
     if (!trace || trace.length === 0) return [];
@@ -152,7 +204,7 @@ export const StateVisualizer: React.FC<StateVisualizerProps> = ({
   const primitiveEntries = Object.entries(persistentPrimitives).reverse();
   const callStack = currentFrame?.callStack || ["Solution.main"];
   const isCountingLength = Boolean(
-    /\b(int|var|let|const)?\s*([a-zA-Z_]\w*)\s*=\s*([a-zA-Z_]\w*)\.length\b|\b([a-zA-Z_]\w*)\s*=\s*len\s*\(/.test(activeLineCode)
+    /\b(int|var|let|const)?\s*([a-zA-Z_]\w*)\s*=\s*.*?(?:\.length\b|len\s*\()/.test(activeLineCode)
   );
 
   const stepNewStdout = useMemo(() => {
@@ -169,6 +221,27 @@ export const StateVisualizer: React.FC<StateVisualizerProps> = ({
     }
     return null;
   }, [currentFrame, previousFrame]);
+
+  // Auto-scroll vertically when new stdout, errors, or active elements appear so nothing is hidden
+  useEffect(() => {
+    if (!scrollContainerRef.current) return;
+    const timer = setTimeout(() => {
+      const container = scrollContainerRef.current;
+      if (!container) return;
+
+      const activeEl = container.querySelector(
+        "[data-active-array='true'], [data-new-stdout='true']"
+      );
+      if (activeEl) {
+        const cRect = container.getBoundingClientRect();
+        const aRect = activeEl.getBoundingClientRect();
+        if (aRect.bottom > cRect.bottom || aRect.top < cRect.top) {
+          activeEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [currentStep, stepNewStdout, error]);
 
   return (
     <div className="h-full flex flex-col overflow-hidden bg-[#0a0a0a] relative">
@@ -254,7 +327,7 @@ export const StateVisualizer: React.FC<StateVisualizerProps> = ({
       </div>
 
       {activeTab === "visualizer" && (
-        <div className="flex-1 overflow-y-auto p-3.5 space-y-3">
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-3.5 space-y-3 scroll-smooth scrollbar-thin scrollbar-thumb-white/10">
           <AnimatePresence>
             {(error || (currentFrame as any)?.error) && (
               <motion.div
@@ -274,6 +347,7 @@ export const StateVisualizer: React.FC<StateVisualizerProps> = ({
           <AnimatePresence>
             {stepNewStdout && (
               <motion.div
+                data-new-stdout="true"
                 initial={{ opacity: 0, y: -10, scale: 0.96 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -10, scale: 0.96 }}
@@ -348,11 +422,12 @@ export const StateVisualizer: React.FC<StateVisualizerProps> = ({
                 variables={primitiveEntries.map(([name, val]) => ({
                   name,
                   value: val,
-                  prevValue: prevLocals[name],
-                  isMutated: prevLocals[name] !== undefined && prevLocals[name] !== val,
+                  prevValue: prevPersistentLocals[name],
+                  isMutated: prevPersistentLocals[name] !== val,
                   isActive: activeKeys.has(name),
                 }))}
                 activeLineCode={activeLineCode}
+                currentStep={currentStep}
               />
             </div>
           )}
@@ -375,8 +450,8 @@ export const StateVisualizer: React.FC<StateVisualizerProps> = ({
                   memoryVariables={primitiveEntries.map(([name, val]) => ({
                     name,
                     value: val,
-                    prevValue: prevLocals[name],
-                    isMutated: prevLocals[name] !== undefined && prevLocals[name] !== val,
+                    prevValue: prevPersistentLocals[name],
+                    isMutated: prevPersistentLocals[name] !== val,
                     isActive: activeKeys.has(name),
                   }))}
                 />

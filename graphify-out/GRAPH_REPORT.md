@@ -1,11 +1,11 @@
-# Graph Report - CodeLens  (2026-09-06)
+# Graph Report - CodeLens  (2026-10-10)
 
 ## Corpus Check
-- 35 files · ~259,369 words
+- 37 files · ~267,935 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 70 nodes · 42 edges · 6 communities detected
+- 77 nodes · 47 edges · 5 communities detected
 - Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 1 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
@@ -15,7 +15,6 @@
 - [[_COMMUNITY_Community 2|Community 2]]
 - [[_COMMUNITY_Community 5|Community 5]]
 - [[_COMMUNITY_Community 6|Community 6]]
-- [[_COMMUNITY_Community 7|Community 7]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `handleKeyDown()` - 4 edges
@@ -25,9 +24,9 @@
 5. `CodeRequest` - 2 edges
 6. `TraceStep` - 2 edges
 7. `BubbleSort` - 2 edges
-8. `Solution` - 2 edges
-9. `TwoSum` - 2 edges
-10. `handleRunTrace()` - 2 edges
+8. `TwoSum` - 2 edges
+9. `handleRunTrace()` - 2 edges
+10. `handleTogglePlay()` - 2 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `generate_trace()` --calls--> `TraceResponse`  [INFERRED]
@@ -36,12 +35,12 @@
 ## Communities
 
 ### Community 0 - "Community 0"
-Cohesion: 0.38
-Nodes (5): generate_trace(), BaseModel, CodeRequest, TraceResponse, TraceStep
+Cohesion: 0.27
+Nodes (4): handleKeyDown(), handleRunTrace(), handleTogglePlay(), isInputOrEditor()
 
 ### Community 1 - "Community 1"
-Cohesion: 0.43
-Nodes (4): handleKeyDown(), handleRunTrace(), handleTogglePlay(), isInputOrEditor()
+Cohesion: 0.38
+Nodes (5): generate_trace(), BaseModel, CodeRequest, TraceResponse, TraceStep
 
 ### Community 2 - "Community 2"
 Cohesion: 0.67
@@ -53,10 +52,6 @@ Nodes (1): BubbleSort
 
 ### Community 6 - "Community 6"
 Cohesion: 0.67
-Nodes (1): Solution
-
-### Community 7 - "Community 7"
-Cohesion: 0.67
 Nodes (1): TwoSum
 
 ## Knowledge Gaps
@@ -64,9 +59,7 @@ Nodes (1): TwoSum
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 5`** (3 nodes): `BubbleSort.java`, `BubbleSort`, `.main()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 6`** (3 nodes): `Solution.java`, `Solution`, `.main()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 7`** (3 nodes): `TwoSum.java`, `TwoSum`, `.main()`
+- **Thin community `Community 6`** (3 nodes): `TwoSum.java`, `TwoSum`, `.main()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 
 ## Suggested Questions

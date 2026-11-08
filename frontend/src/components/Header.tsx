@@ -22,14 +22,11 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-md bg-neutral-900 border border-neutral-800 flex items-center justify-center">
-            <Terminal className="w-3.5 h-3.5 text-neutral-300" />
+           C
           </div>
           <div className="flex items-center gap-2">
             <span className="font-mono text-xs font-semibold tracking-wide text-neutral-100">
               CodeLens
-            </span>
-            <span className="text-[10px] font-mono text-neutral-500">
-              / tracer
             </span>
           </div>
         </div>

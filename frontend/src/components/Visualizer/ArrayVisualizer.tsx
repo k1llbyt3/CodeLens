@@ -134,8 +134,38 @@ export const ArrayVisualizer: React.FC<ArrayVisualizerProps> = ({
       : null;
   const pointerLabel: string = firstPointer?.name || firstPointer?.label || "";
 
+  const horizontalScrollRef = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    if (!horizontalScrollRef.current) return;
+    const container = horizontalScrollRef.current;
+
+    if (container.scrollWidth > container.clientWidth) {
+      const activeIdx =
+        pointerIndex !== null
+          ? pointerIndex
+          : activeIndices.size > 0
+          ? Array.from(activeIndices)[0]
+          : swapIndices
+          ? swapIndices[0]
+          : null;
+
+      if (activeIdx !== null && activeIdx >= 0) {
+        const blockCenterX = paddingX + activeIdx * (itemWidth + gap) + itemWidth / 2;
+        const targetScrollLeft = blockCenterX - container.clientWidth / 2;
+        container.scrollTo({
+          left: Math.max(0, targetScrollLeft),
+          behavior: "smooth",
+        });
+      }
+    }
+  }, [pointerIndex, activeIndices, swapIndices, paddingX, itemWidth, gap, currentStep]);
+
   return (
-    <div className="flex flex-col items-center justify-center w-full select-none">
+    <div
+      data-active-array="true"
+      className="flex flex-col items-center justify-center w-full select-none"
+    >
       {/* Visualizer Header */}
       <div className="w-full max-w-4xl mb-2 flex flex-wrap items-center justify-between gap-3 px-2">
         <div className="flex items-center gap-2">
@@ -152,20 +182,25 @@ export const ArrayVisualizer: React.FC<ArrayVisualizerProps> = ({
         </div>
       </div>
 
-      {/* Memory Table - Positioned cleanly BELOW the array header */}
+      {/* Memory Table - Positioned cleanly ABOVE array visualizer */}
       {memoryVariables && memoryVariables.length > 0 && (
-        <div className="w-full max-w-4xl px-2 my-2">
+        <div className="w-full max-w-4xl px-2 my-2 relative z-0">
           <MemoryTable
             variables={memoryVariables}
             activeLineCode={activeLineCode}
+            currentStep={currentStep}
           />
         </div>
       )}
 
-      {/* Main Responsive Horizontal Scroll Wrapper */}
-      <div className="w-full overflow-visible pb-4 flex justify-center">
+      {/* Main Responsive Horizontal Scroll Wrapper with Auto-Scroll to Active Pointers/Blocks */}
+      <div
+        ref={horizontalScrollRef}
+        className="-mt-20 pt-20 w-full overflow-x-auto pb-4 flex justify-start md:justify-center scroll-smooth relative z-50"
+        style={{ scrollbarWidth: "thin" }}
+      >
         <div
-          className="relative flex flex-col items-center overflow-visible"
+          className="relative flex flex-col items-center shrink-0"
           style={{ width: `${totalWidth}px` }}
         >
           {/* ═══ THREE.JS 3D ARRAY SYSTEM (BLOCKS + BASE) ═══ */}

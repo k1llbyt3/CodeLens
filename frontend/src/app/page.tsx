@@ -29,7 +29,8 @@ export default function CodeLensPage() {
 
   const trace = useMemo(() => {
     if (!rawTrace || rawTrace.length === 0) return [];
-    if (rawTrace[0].line === 1) return rawTrace;
+    const normalized = rawTrace;
+    if (normalized[0]?.line === 1) return normalized;
 
     const mock0: TraceStep = {
       step: 0,
@@ -44,13 +45,13 @@ export default function CodeLensPage() {
       callStack: ["Solution.main"]
     };
 
-    const reindexed = rawTrace.map((s, idx) => ({
+    const reindexed = normalized.map((s, idx) => ({
       ...s,
       step: idx + 2
     }));
 
     return [mock0, mock1, ...reindexed];
-  }, [rawTrace]);
+  }, [rawTrace, code]);
 
   const handleSelectPreset = (id: string) => {
     if (!id) {
@@ -136,7 +137,7 @@ export default function CodeLensPage() {
     }
 
     const intervalMs =
-      playbackSpeed === 0.25 ? 6000 : playbackSpeed === 0.5 ? 3000 : 1500;
+      playbackSpeed === 0.25 ? 8000 : playbackSpeed === 0.5 ? 4500 : 2800;
 
     playTimerRef.current = setInterval(() => {
       setCurrentStep((prev) => {
@@ -201,6 +202,36 @@ export default function CodeLensPage() {
 
   const [isTheaterMode, setIsTheaterMode] = useState(false);
 
+  const [splitRatio, setSplitRatio] = useState<number>(50); // percentage of editor width (18% to 50%)
+  const [isDraggingSplit, setIsDraggingSplit] = useState<boolean>(false);
+
+  const handleMouseDownSplit = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDraggingSplit(true);
+  };
+
+  useEffect(() => {
+    if (!isDraggingSplit) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const newPct = (e.clientX / window.innerWidth) * 100;
+      // Clamped between 18% (can move to the left) and 50% (strictly limited to right)
+      const clamped = Math.max(18, Math.min(50, newPct));
+      setSplitRatio(clamped);
+    };
+
+    const handleMouseUp = () => {
+      setIsDraggingSplit(false);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isDraggingSplit]);
+
   const currentFrame = trace[currentStep];
   const previousFrame = currentStep > 0 ? trace[currentStep - 1] : undefined;
 
@@ -211,7 +242,7 @@ export default function CodeLensPage() {
   }, [error]);
 
   return (
-    <div className="h-screen w-screen flex flex-col overflow-hidden bg-[#0a0a0a] text-neutral-100 select-none">
+    <div className={`h-screen w-screen flex flex-col overflow-hidden bg-[#0a0a0a] text-neutral-100 select-none ${isDraggingSplit ? "cursor-col-resize select-none" : ""}`}>
       <Header
         selectedPresetId={selectedPresetId}
         onSelectPreset={handleSelectPreset}
@@ -219,9 +250,12 @@ export default function CodeLensPage() {
         isLoading={isLoading}
       />
 
-      <main className="flex-1 flex overflow-hidden">
+      <main className="flex-1 flex overflow-hidden relative">
         {!isTheaterMode && (
-          <section className="w-1/2 h-full transition-all duration-300">
+          <section
+            style={{ width: `${splitRatio}%` }}
+            className={`h-full overflow-hidden ${isDraggingSplit ? "" : "transition-all duration-150"}`}
+          >
             <CodeEditor
               code={code}
               onChange={(val) => setCode(val || "")}
@@ -231,7 +265,51 @@ export default function CodeLensPage() {
           </section>
         )}
 
-        <section className={`${isTheaterMode ? "w-full" : "w-1/2"} h-full overflow-hidden transition-all duration-300`}>
+        {!isTheaterMode && (
+          <div
+            onMouseDown={handleMouseDownSplit}
+            className={`relative group w-1.5 hover:w-2 bg-[#171717] hover:bg-cyan-500/70 cursor-col-resize flex items-center justify-center transition-colors z-40 ${
+              isDraggingSplit ? "bg-cyan-400 w-2 shadow-[0_0_12px_rgba(6,182,212,0.8)]" : ""
+            }`}
+            title="Drag to expand visualizer"
+          >
+            {/* Grab handle indicator */}
+            <div className="absolute flex flex-col items-center gap-1 py-1.5 px-0.5 rounded-full bg-neutral-800/90 group-hover:bg-cyan-950 border border-white/10 group-hover:border-cyan-400/50 shadow-md pointer-events-none transition-all">
+              <span className="w-0.5 h-3 bg-neutral-400 group-hover:bg-cyan-300 rounded-full" />
+              <span className="w-0.5 h-3 bg-neutral-400 group-hover:bg-cyan-300 rounded-full" />
+            </div>
+
+            {/* Quick adjust preset tags appearing on hover */}
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 bg-[#121212]/95 border border-white/10 rounded-md p-1 shadow-xl z-50 text-[10px] font-mono pointer-events-auto">
+              <button
+                onClick={(e) => { e.stopPropagation(); setSplitRatio(25); }}
+                className={`px-1.5 py-0.5 rounded hover:bg-cyan-500/20 hover:text-cyan-300 ${splitRatio <= 28 ? "text-cyan-400 font-bold bg-cyan-950/60" : "text-neutral-400"}`}
+                title="Compact Editor (25%)"
+              >
+                25%
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); setSplitRatio(35); }}
+                className={`px-1.5 py-0.5 rounded hover:bg-cyan-500/20 hover:text-cyan-300 ${splitRatio > 28 && splitRatio < 45 ? "text-cyan-400 font-bold bg-cyan-950/60" : "text-neutral-400"}`}
+                title="Medium (35%)"
+              >
+                35%
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); setSplitRatio(50); }}
+                className={`px-1.5 py-0.5 rounded hover:bg-cyan-500/20 hover:text-cyan-300 ${splitRatio >= 48 ? "text-cyan-400 font-bold bg-cyan-950/60" : "text-neutral-400"}`}
+                title="Half Split (50% max)"
+              >
+                50%
+              </button>
+            </div>
+          </div>
+        )}
+
+        <section
+          style={{ width: isTheaterMode ? "100%" : `${100 - splitRatio}%` }}
+          className={`h-full overflow-hidden ${isDraggingSplit ? "" : "transition-all duration-150"}`}
+        >
           <StateVisualizer
             currentFrame={currentFrame}
             previousFrame={previousFrame}

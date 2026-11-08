@@ -184,22 +184,21 @@ export function computeGlobalTraceBlocks(
 
     Object.entries(currLocals).forEach(([k, val]) => {
       if (EXCLUDED_PTR_NAMES.has(k)) return;
+      const isStandard = STANDARD_POINTER_NAMES.has(k);
+      const isUsedAsIndex =
+        activeLine.includes(`[${k}]`) ||
+        activeLine.includes(`[ ${k} ]`) ||
+        (code && (new RegExp(`\\[\\s*${k}\\s*\\]`).test(code) && (activeLine.includes(k) || isStandard)));
+
+      if (!isStandard && !isUsedAsIndex) {
+        return; // Do NOT treat n as a pointer unless arr[n] is actually used
+      }
+
       if (
         typeof val === "number" &&
         Number.isInteger(val) &&
-        val >= 0 &&
-        val < currentBlocks.length
+        (isStandard ? (val >= -3 && val <= currentBlocks.length + 3) : (val >= 0 && val < currentBlocks.length))
       ) {
-        // Must be a standard indexing pointer OR explicitly used inside array indexing (e.g. arr[n])
-        const isStandard = STANDARD_POINTER_NAMES.has(k);
-        const isUsedAsIndex =
-          activeLine.includes(`[${k}]`) ||
-          activeLine.includes(`[ ${k} ]`) ||
-          (code && (new RegExp(`\\[\\s*${k}\\s*\\]`).test(code) && (activeLine.includes(k) || isStandard)));
-
-        if (!isStandard && !isUsedAsIndex) {
-          return; // Do NOT treat n as a pointer unless arr[n] is actually used
-        }
 
         const isPointerInSwap =
           activeSwapIndices &&
